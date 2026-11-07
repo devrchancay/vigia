@@ -19,14 +19,14 @@ import com.ramonchancay.vigia.core.designsystem.component.PanelTile
 import com.ramonchancay.vigia.core.device.DeviceStatus
 import com.ramonchancay.vigia.core.device.WifiStatus
 import com.ramonchancay.vigia.core.model.WidgetConfig
+import com.ramonchancay.vigia.core.model.WidgetParams
+import com.ramonchancay.vigia.core.model.WidgetTypes
 import com.ramonchancay.vigia.feature.panel.R
 import java.util.Locale
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonPrimitive
 
 internal const val DEVICE_ROW_TAG = "device_row_"
 
-/** Rows the `device` widget can show, by their `params.show` name. */
+/** Rows the `device` widget can show, by their `params.show` name ([WidgetTypes.DEVICE_ROWS]). */
 internal enum class DeviceRow(val paramName: String) {
     Battery("battery"),
     BatteryTemp("batteryTemp"),
@@ -34,30 +34,16 @@ internal enum class DeviceRow(val paramName: String) {
     Wifi("wifi");
 
     companion object {
-        /** Reads `params.show`; when absent, every row is shown. Unknown names are reported, not dropped silently. */
-        fun parse(widget: WidgetConfig): Result<List<DeviceRow>> {
-            val show = widget.params["show"] ?: return Result.success(entries)
-            val names = (show as? JsonArray)?.map { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }
-                ?: return Result.failure(IllegalArgumentException("show"))
-            val rows = names.map { name -> entries.firstOrNull { it.paramName == name } }
-            return if (rows.any { it == null }) {
-                Result.failure(IllegalArgumentException("show"))
-            } else {
-                Result.success(rows.filterNotNull())
-            }
-        }
+        fun of(name: String): DeviceRow = entries.first { it.paramName == name }
     }
 }
 
 @Composable
 internal fun DeviceWidget(widget: WidgetConfig, device: State<DeviceStatus?>, modifier: Modifier = Modifier) {
-    val rows = remember(widget.params) { DeviceRow.parse(widget) }.getOrNull()
+    val params = remember(widget.params) { WidgetParams.device(widget) }
+    val rows = params.value?.show?.map(DeviceRow::of)
     if (rows == null) {
-        ErrorTile(
-            title = widget.title ?: widget.id,
-            message = stringResource(R.string.widget_invalid_param, "show"),
-            modifier = modifier
-        )
+        InvalidParamsTile(widget, params.errors, modifier)
         return
     }
     val status = device.value

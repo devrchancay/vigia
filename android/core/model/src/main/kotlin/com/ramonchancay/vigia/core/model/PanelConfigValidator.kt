@@ -83,6 +83,7 @@ object PanelConfigValidator {
             if (widget.type.isBlank()) {
                 add(ConfigError(ConfigError.Code.InvalidFormat, "$path.type", "Must not be blank"))
             }
+            WidgetParams.validate(widget).forEach { add(it.copy(path = "$path.${it.path}")) }
             validatePosition(widget.pos, grid, "$path.pos", checkBounds = gridIsValid)
         }
         if (gridIsValid) validateOverlaps(widgets)

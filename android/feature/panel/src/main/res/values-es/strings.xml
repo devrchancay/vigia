@@ -4,8 +4,7 @@
     <string name="panel_error">Algo falló al cargar el panel.</string>
     <string name="panel_retry">Reintentar</string>
     <string name="widget_unsupported_type">Tipo de widget no soportado: %1$s</string>
-    <string name="widget_missing_param">Falta el parámetro: params.%1$s</string>
-    <string name="widget_invalid_param">Parámetro inválido: params.%1$s</string>
+    <string name="widget_invalid_param">Parámetro inválido: %1$s</string>
     <string name="device_title">Dispositivo</string>
     <string name="device_battery">Batería</string>
     <string name="device_charging">%1$s · cargando</string>
