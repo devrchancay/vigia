@@ -29,9 +29,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -79,6 +81,7 @@ class VigiaApiTest {
                 ApiDependencies(
                     editor = editor,
                     secrets = secrets,
+                    statusSnapshot = { buildJsonObject { put("widgets", buildJsonObject {}) } },
                     tokenMatches = { it == token },
                     isAllowed = { allowed },
                     appVersion = "1.2.3",
@@ -227,6 +230,14 @@ class VigiaApiTest {
 
         assertEquals(HttpStatusCode.NotFound, response.status)
         assertTrue(response.bodyAsText().contains("\"code\":\"not_found\""))
+    }
+
+    @Test
+    fun `status needs a token and returns the snapshot`() = testApplication {
+        setUp()
+
+        assertEquals(HttpStatusCode.Unauthorized, client.get("$API_PREFIX/status").status)
+        assertEquals("""{"widgets":{}}""", authed("$API_PREFIX/status").bodyAsText())
     }
 
     @Test

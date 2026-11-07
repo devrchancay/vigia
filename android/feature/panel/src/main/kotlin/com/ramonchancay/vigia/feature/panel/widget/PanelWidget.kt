@@ -17,6 +17,10 @@ internal fun PanelWidget(widget: WidgetConfig, data: WidgetData, modifier: Modif
 
         WidgetTypes.DEVICE -> DeviceWidget(widget = widget, device = data.device, modifier = modifier)
 
+        WidgetTypes.UPTIME -> UptimeWidget(widget = widget, data = data, modifier = modifier)
+
+        WidgetTypes.GITHUB_ACTIONS -> GithubActionsWidget(widget = widget, data = data, modifier = modifier)
+
         else -> ErrorTile(
             title = widget.title ?: widget.id,
             message = stringResource(R.string.widget_unsupported_type, widget.type),

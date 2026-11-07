@@ -2,7 +2,7 @@
 
 Vigía: an open-source Android app that turns an old phone into an always-on, remotely configurable status panel (uptime, CI, Claude Code agents, leads). It embeds its own HTTP server and is controlled from a CLI/MCP server.
 
-**Read first:** `docs/CONTEXT.md` (why) and `docs/SPEC.md` (what). Status: M0 (scaffold), M1 (renderer) and M2 (embedded server, config API, setup screen) are merged (`android/`, see `android/README.md`); next is milestone M3 (uptime and GitHub Actions sources) in the spec.
+**Read first:** `docs/CONTEXT.md` (why) and `docs/SPEC.md` (what). Status: M0 (scaffold), M1 (renderer), M2 (embedded server, config API, setup screen) and M3 (uptime and GitHub Actions sources, secrets, `/status`) are merged (`android/`, see `android/README.md`); next is milestone M4 (events, `agents` and `feed` widgets, Claude Code hooks) in the spec.
 
 ## Working agreement
 - The owner is Ramon (Spanish speaker). Talk to him in Spanish, concise and direct. Code, comments, commits, docs and identifiers in English. User-facing strings: English default + `values-es`.

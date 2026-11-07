@@ -37,12 +37,15 @@ import kotlin.time.Duration.Companion.seconds
 import kotlinx.io.readByteArray
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import timber.log.Timber
 
 /** Everything the API needs, so it can run in the real server and in tests alike. */
 class ApiDependencies(
     val editor: PanelConfigEditor,
     val secrets: SecretStore,
+    /** Current content of every widget for `GET /status`. */
+    val statusSnapshot: suspend () -> JsonObject,
     val tokenMatches: suspend (String) -> Boolean,
     /** Whether a remote IP literal may call the API; see [IpAllowlist]. */
     val isAllowed: (String) -> Boolean,
@@ -97,6 +100,10 @@ fun Application.vigiaApi(deps: ApiDependencies) {
                 }
                 configRoutes(deps.editor, deps.tokenMatches)
                 secretRoutes(deps.secrets, deps.tokenMatches)
+                route("/status") {
+                    install(bearerAuthPlugin(deps.tokenMatches))
+                    get { call.respondText(deps.statusSnapshot().toString(), ContentType.Application.Json) }
+                }
             }
         }
     }

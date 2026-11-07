@@ -12,4 +12,8 @@
     <string name="device_memory">Memory</string>
     <string name="device_wifi">Wi-Fi</string>
     <string name="device_wifi_off">Off</string>
+    <string name="uptime_title">Uptime</string>
+    <string name="github_title">CI</string>
+    <string name="source_pending">checking…</string>
+    <string name="github_no_runs">no runs</string>
 </resources>
