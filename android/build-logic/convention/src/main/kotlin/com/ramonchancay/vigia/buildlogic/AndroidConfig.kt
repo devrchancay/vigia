@@ -24,6 +24,9 @@ internal fun Project.configureAndroidCommon(extension: CommonExtension) {
         compileOptions.targetCompatibility = JavaVersion.VERSION_17
         lint.warningsAsErrors = true
         lint.abortOnError = true
+        // Version freshness is checked by hand before each change (CLAUDE.md). As errors, these checks would fail
+        // CI whenever a library publishes a release, without any change in the repo.
+        lint.disable += setOf("NewerVersionAvailable", "GradleDependency", "AndroidGradlePluginVersion")
     }
     tasks.withType<KotlinCompile>().configureEach {
         compilerOptions {
