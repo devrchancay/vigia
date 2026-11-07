@@ -1,7 +1,7 @@
 # Vigía — Android app
 
 Kotlin, Jetpack Compose + Material 3, MVVM, Hilt, type-safe Navigation Compose, Timber.
-minSdk 26, target/compile SDK 37. Milestone status: **M0 scaffold** (see [`../docs/SPEC.md`](../docs/SPEC.md#9-milestones)).
+minSdk 26, target/compile SDK 37. Milestone status: **M1 renderer, in progress** (see [`../docs/SPEC.md`](../docs/SPEC.md#9-milestones)).
 
 ## Requirements
 
@@ -25,6 +25,8 @@ minSdk 26, target/compile SDK 37. Milestone status: **M0 scaffold** (see [`../do
 app/                     Application, MainActivity (splash, edge-to-edge), VigiaNavHost
 build-logic/convention/  Gradle convention plugins shared by every module
 core/common              injected dispatchers (@Dispatcher), Result + asResult(), java.time.Clock binding
+core/model               PanelConfig (kotlinx.serialization), PanelConfigParser, PanelConfigValidator
+core/data                PanelConfigRepository; today it serves assets/panel/default_config.json
 core/designsystem        VigiaTheme (ember palette, light/dark, optional dynamic color), PanelTile,
                          rememberNotificationPermissionState (Android 13+)
 feature/panel            PanelScreen + PanelViewModel + ClockRepository: the pattern to copy
@@ -32,8 +34,8 @@ gradle/libs.versions.toml  every dependency version lives here
 ```
 
 Modules from the spec that are not here yet arrive with the milestone that needs them, so nothing ships unused:
-`core/model` and `core/data` (M1–M2, with DataStore), `core/server` (M2, Ktor), Room and OkHttp (M3),
-`core/device` (M1/M6), `feature/setup` (M2), `feature/sources` (M3).
+`core/device` (M1/M6), DataStore and config history in `core/data` (M2), `core/server` (M2, Ktor),
+Room and OkHttp (M3), `feature/setup` (M2), `feature/sources` (M3).
 
 ### Convention plugins
 
