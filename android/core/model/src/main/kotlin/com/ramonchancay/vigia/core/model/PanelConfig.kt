@@ -18,12 +18,17 @@ data class PanelConfig(
     }
 }
 
+/** [palette] is one of [PALETTES]; each maps to a palette in the design system. */
 @Serializable
 data class ThemeConfig(
     val mode: ThemeMode = ThemeMode.Dark,
     val palette: String = "ember",
     val background: Background = Background.Solid
-)
+) {
+    companion object {
+        val PALETTES = setOf("ember", "teal", "indigo")
+    }
+}
 
 @Serializable
 enum class ThemeMode {

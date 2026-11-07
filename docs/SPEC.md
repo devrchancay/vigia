@@ -63,7 +63,7 @@ Kotlin, Jetpack Compose + Material 3, MVVM (ViewModel + StateFlow, UiState + eve
 
 The whole UI is described by one JSON document, validated on the device. Unknown widget types render as a visible error tile, never crash.
 
-Validation rules (implemented in `core/model`, `PanelConfigValidator`): unknown keys are rejected (typos surface instead of being ignored); `schemaVersion` must be 1; grid `columns`/`rows` 1–24, `gap` 0–64; at most 64 widgets; widget ids are 1–64 chars of `a-z 0-9 - _`, unique; every widget lies inside the grid and widgets do not overlap; `night` times are `HH:mm` and `brightness` 0–1. Each widget validates its own `params`. Defaults: landscape grid 8×4, gap 8; dark theme, `ember` palette, solid background.
+Validation rules (implemented in `core/model`, `PanelConfigValidator`): unknown keys are rejected (typos surface instead of being ignored); `schemaVersion` must be 1; grid `columns`/`rows` 1–24, `gap` 0–64; at most 64 widgets; widget ids are 1–64 chars of `a-z 0-9 - _`, unique; every widget lies inside the grid and widgets do not overlap; `night` times are `HH:mm` and `brightness` 0–1; `theme.palette` is one of `ember`, `teal`, `indigo` (named palettes, decided 2026-11-07: raw colors could produce unreadable panels). Each widget validates its own `params`. Defaults: landscape grid 8×4, gap 8; dark theme, `ember` palette, solid background.
 
 ```json
 {
@@ -92,7 +92,7 @@ Validation rules (implemented in `core/model`, `PanelConfigValidator`): unknown 
 | type | data source | notes |
 |---|---|---|
 | `clock` | device | time, date, locale-aware |
-| `device` | device | battery %, temperature, charging, memory, Wi-Fi SSID/signal |
+| `device` | device | battery %, temperature (warns at 40 °C), charging, memory, Wi-Fi signal. `params.show` picks rows: `battery`, `batteryTemp`, `memory`, `wifi` (default: all). No SSID: reading it needs the location permission |
 | `uptime` | poller | status, latency, last change; red/amber/green |
 | `github_actions` | poller | latest run per repo/workflow, conclusion, duration |
 | `agents` | pushed events (`source: claude-code`) | one row per session: working / waiting for permission / done |
@@ -198,6 +198,5 @@ Work in small steps, each one reviewable and runnable.
 
 ## 10. Open questions
 
-- Themes: ship 3–4 palettes inspired by the Fósil look (ember, teal, indigo) or allow raw colors in config?
 - Multiple pages/screens swiped or rotated on a timer?
 - Should the phone also expose its own tiles as actions (e.g. "re-run CI") or stay read-only in v1? Proposal: read-only in v1.

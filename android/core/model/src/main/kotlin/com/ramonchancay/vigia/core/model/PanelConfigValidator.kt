@@ -21,6 +21,15 @@ object PanelConfigValidator {
                 )
             )
         }
+        if (config.theme.palette !in ThemeConfig.PALETTES) {
+            add(
+                ConfigError(
+                    ConfigError.Code.InvalidFormat,
+                    "theme.palette",
+                    "Unknown palette '${config.theme.palette}'; use one of ${ThemeConfig.PALETTES.joinToString()}"
+                )
+            )
+        }
         validateGrid(config.grid)
         config.night?.let { validateNight(it) }
         if (config.widgets.size > MAX_WIDGETS) {
