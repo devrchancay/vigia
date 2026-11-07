@@ -63,24 +63,26 @@ Kotlin, Jetpack Compose + Material 3, MVVM (ViewModel + StateFlow, UiState + eve
 
 The whole UI is described by one JSON document, validated on the device. Unknown widget types render as a visible error tile, never crash.
 
+Validation rules (implemented in `core/model`, `PanelConfigValidator`): unknown keys are rejected (typos surface instead of being ignored); `schemaVersion` must be 1; grid `columns`/`rows` 1–24, `gap` 0–64; at most 64 widgets; widget ids are 1–64 chars of `a-z 0-9 - _`, unique; every widget lies inside the grid and widgets do not overlap; `night` times are `HH:mm` and `brightness` 0–1. Each widget validates its own `params`. Defaults: landscape grid 8×4, gap 8; dark theme, `ember` palette, solid background.
+
 ```json
 {
   "schemaVersion": 1,
   "theme": { "mode": "dark", "palette": "ember", "background": "gradient" },
-  "grid": { "columns": 4, "rows": 8, "gap": 8 },
+  "grid": { "columns": 8, "rows": 4, "gap": 8 },
   "night": { "from": "23:00", "to": "07:00", "brightness": 0.05 },
   "widgets": [
-    { "id": "clock", "type": "clock", "pos": { "x": 0, "y": 0, "w": 4, "h": 2 } },
-    { "id": "device", "type": "device", "pos": { "x": 0, "y": 2, "w": 4, "h": 1 },
+    { "id": "clock", "type": "clock", "pos": { "x": 0, "y": 0, "w": 3, "h": 2 } },
+    { "id": "device", "type": "device", "pos": { "x": 0, "y": 2, "w": 3, "h": 1 },
       "params": { "show": ["battery", "batteryTemp", "memory", "wifi"] } },
-    { "id": "sites", "type": "uptime", "title": "Sites", "pos": { "x": 0, "y": 3, "w": 2, "h": 2 },
+    { "id": "agents", "type": "agents", "title": "Claude Code", "pos": { "x": 0, "y": 3, "w": 3, "h": 1 } },
+    { "id": "sites", "type": "uptime", "title": "Sites", "pos": { "x": 3, "y": 0, "w": 2, "h": 2 },
       "params": { "intervalSec": 60, "targets": [
-        { "name": "ramonchancay.me", "url": "https://ramonchancay.me" },
-        { "name": "pet-meet api", "url": "https://example.com/health", "expectStatus": 200 } ] } },
-    { "id": "ci", "type": "github_actions", "title": "CI", "pos": { "x": 2, "y": 3, "w": 2, "h": 2 },
+        { "name": "website", "url": "https://example.com" },
+        { "name": "api", "url": "https://api.example.com/health", "expectStatus": 200 } ] } },
+    { "id": "ci", "type": "github_actions", "title": "CI", "pos": { "x": 5, "y": 0, "w": 3, "h": 2 },
       "params": { "repos": ["owner/repo"], "branch": "main", "intervalSec": 60, "tokenSecret": "github" } },
-    { "id": "agents", "type": "agents", "title": "Claude Code", "pos": { "x": 0, "y": 5, "w": 4, "h": 1 } },
-    { "id": "inbox", "type": "feed", "title": "Upwork & leads", "pos": { "x": 0, "y": 6, "w": 4, "h": 2 },
+    { "id": "inbox", "type": "feed", "title": "Upwork & leads", "pos": { "x": 3, "y": 2, "w": 5, "h": 2 },
       "params": { "sources": ["upwork", "radar"], "max": 5 } }
   ]
 }
