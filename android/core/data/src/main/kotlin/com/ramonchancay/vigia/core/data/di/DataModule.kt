@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import androidx.room.Room
 import com.ramonchancay.vigia.core.common.dispatchers.Dispatcher
 import com.ramonchancay.vigia.core.common.dispatchers.VigiaDispatchers
 import com.ramonchancay.vigia.core.data.config.BundledDefaultConfigSource
@@ -19,6 +20,10 @@ import com.ramonchancay.vigia.core.data.secrets.SecretArchive
 import com.ramonchancay.vigia.core.data.secrets.SecretArchiveSerializer
 import com.ramonchancay.vigia.core.data.secrets.SecretCipher
 import com.ramonchancay.vigia.core.data.secrets.SecretStore
+import com.ramonchancay.vigia.core.data.status.RoomStatusRepository
+import com.ramonchancay.vigia.core.data.status.StatusDao
+import com.ramonchancay.vigia.core.data.status.StatusDatabase
+import com.ramonchancay.vigia.core.data.status.StatusRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -49,7 +54,22 @@ internal interface DataModule {
     @Binds
     fun bindsSecretCipher(impl: KeystoreSecretCipher): SecretCipher
 
+    @Binds
+    fun bindsStatusRepository(impl: RoomStatusRepository): StatusRepository
+
     companion object {
+        @Provides
+        @Singleton
+        fun providesStatusDatabase(@ApplicationContext context: Context): StatusDatabase =
+            Room.databaseBuilder(context, StatusDatabase::class.java, "status.db")
+                // Only the latest state is stored and sources refill it within a minute, so a schema change
+                // can start from empty instead of migrating.
+                .fallbackToDestructiveMigration(dropAllTables = true)
+                .build()
+
+        @Provides
+        fun providesStatusDao(database: StatusDatabase): StatusDao = database.statusDao()
+
         @Provides
         @Singleton
         fun providesConfigArchiveStore(
