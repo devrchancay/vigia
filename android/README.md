@@ -1,7 +1,7 @@
 # Vigía — Android app
 
 Kotlin, Jetpack Compose + Material 3, MVVM, Hilt, type-safe Navigation Compose, Timber.
-minSdk 26, target/compile SDK 37. Milestone status: **M1 renderer, in progress** (see [`../docs/SPEC.md`](../docs/SPEC.md#9-milestones)).
+minSdk 26, target/compile SDK 37. Milestone status: **M1 renderer done**; next M2 (embedded server) (see [`../docs/SPEC.md`](../docs/SPEC.md#9-milestones)).
 
 ## Requirements
 
@@ -27,6 +27,7 @@ build-logic/convention/  Gradle convention plugins shared by every module
 core/common              injected dispatchers (@Dispatcher), Result + asResult(), java.time.Clock binding
 core/model               PanelConfig (kotlinx.serialization), PanelConfigParser, PanelConfigValidator
 core/data                PanelConfigRepository; today it serves assets/panel/default_config.json
+core/device              DeviceStatusRepository: battery, temperature, memory, Wi-Fi signal
 core/designsystem        VigiaTheme (ember palette, light/dark, optional dynamic color), PanelTile,
                          rememberNotificationPermissionState (Android 13+)
 feature/panel            PanelScreen + PanelViewModel + ClockRepository: the pattern to copy
@@ -34,7 +35,7 @@ gradle/libs.versions.toml  every dependency version lives here
 ```
 
 Modules from the spec that are not here yet arrive with the milestone that needs them, so nothing ships unused:
-`core/device` (M1/M6), DataStore and config history in `core/data` (M2), `core/server` (M2, Ktor),
+`DataStore and config history in `core/data` (M2), `core/server` (M2, Ktor),
 Room and OkHttp (M3), `feature/setup` (M2), `feature/sources` (M3).
 
 ### Convention plugins
@@ -46,6 +47,23 @@ Room and OkHttp (M3), `feature/setup` (M2), `feature/sources` (M3).
 | `vigia.android.compose` | Compose compiler, BOM, Material 3, tooling |
 | `vigia.hilt` | KSP + Hilt |
 | `vigia.android.feature` | library + compose + hilt + navigation + lifecycle + test stack + `core:common`/`core:designsystem` |
+
+## Performance
+
+Budget from the spec: steady frames, no recomposition storms, < 150 MB RAM. Live values (clock, device status)
+reach widgets as separate `State`s read inside the widget, so a tick never recomposes the grid.
+
+Measured on a Redmi 9A (Helio G25, 2 GB, Android 11), release build, default panel, 30 s idle:
+
+| Metric | Value |
+|---|---|
+| Cold start | 0.59–0.70 s (1.3 s on the first launch after install) |
+| Memory (PSS) | 31 MB |
+| Median frame | 13 ms (one frame per second, the clock tick) |
+| Frames over 16.6 ms | 5 of 30, when device status refreshes (every 10 s) |
+
+To reproduce: build `assembleRelease`, sign it with the debug key (`apksigner`), install, then
+`adb shell dumpsys gfxinfo com.ramonchancay.vigia reset`, wait, and read `dumpsys gfxinfo` again.
 
 ## Adding a feature
 
