@@ -63,7 +63,7 @@ Kotlin, Jetpack Compose + Material 3, MVVM (ViewModel + StateFlow, UiState + eve
 
 The whole UI is described by one JSON document, validated on the device. Unknown widget types render as a visible error tile, never crash.
 
-Validation rules (implemented in `core/model`, `PanelConfigValidator`): unknown keys are rejected (typos surface instead of being ignored); `schemaVersion` must be 1; grid `columns`/`rows` 1–24, `gap` 0–64; at most 64 widgets; widget ids are 1–64 chars of `a-z 0-9 - _`, unique; every widget lies inside the grid and widgets do not overlap; `night` times are `HH:mm` and `brightness` 0–1; `theme.palette` is one of `ember`, `teal`, `indigo` (named palettes, decided 2026-11-07: raw colors could produce unreadable panels). Each widget validates its own `params`. Defaults: landscape grid 8×4, gap 8; dark theme, `ember` palette, solid background.
+Validation rules (implemented in `core/model`, `PanelConfigValidator`): unknown keys are rejected (typos surface instead of being ignored); `schemaVersion` must be 1; grid `columns`/`rows` 1–24, `gap` 0–64; at most 64 widgets; widget ids are 1–64 chars of `a-z 0-9 - _`, unique; every widget lies inside the grid and widgets do not overlap; `night` times are `HH:mm` and `brightness` 0–1; `theme.palette` is one of `ember`, `teal`, `indigo` (named palettes, decided 2026-11-07: raw colors could produce unreadable panels). Each known widget type validates its own `params` (unknown keys rejected, errors at `widgets[i].params.<field>`); see the widget table. Defaults: landscape grid 8×4, gap 8; dark theme, `ember` palette, solid background.
 
 ```json
 {
@@ -93,17 +93,17 @@ Validation rules (implemented in `core/model`, `PanelConfigValidator`): unknown 
 |---|---|---|
 | `clock` | device | time, date, locale-aware |
 | `device` | device | battery %, temperature (warns at 40 °C), charging, memory, Wi-Fi signal. `params.show` picks rows: `battery`, `batteryTemp`, `memory`, `wifi` (default: all). No SSID: reading it needs the location permission |
-| `uptime` | poller | status, latency, last change; red/amber/green |
-| `github_actions` | poller | latest run per repo/workflow, conclusion, duration |
+| `uptime` | poller | status, latency, last change; red/amber/green. `params`: `targets` (1–20 of `{name, url, expectStatus?}`), `intervalSec` 15–3600 (default 60), `slowMs` (amber above it, default 1000) |
+| `github_actions` | poller | latest run per repo/workflow, conclusion, duration. `params`: `repos` (1–10 `owner/repo`), `branch?`, `workflow?` (file name or id), `intervalSec` 30–3600 (default 60), `tokenSecret?` |
 | `agents` | pushed events (`source: claude-code`) | one row per session: working / waiting for permission / done |
 | `feed` | pushed events filtered by `source` | latest N items, unread badge, TTL |
 | `metric` | pushed value | big number + label + optional trend (generic) |
-| `note` | config | short text/markdown, for reminders |
+| `note` | config | short text for reminders. `params.text` (1–500 chars) |
 
 Generic `metric`, `feed` and `note` mean any script can drive the panel without new app code.
 
 ### Secrets
-Secrets (GitHub token, webhook URLs) are never in the config. They are stored write-only via `PUT /api/v1/secrets/{name}`, encrypted with Android Keystore, referenced by name (`tokenSecret`). `GET /config` never returns them.
+Secrets (GitHub token, webhook URLs) are never in the config. They are stored write-only via `PUT /api/v1/secrets/{name}` (raw value as the body, up to 4096 chars), encrypted with AES-256-GCM under a non-exportable Android Keystore key, and referenced by name (`tokenSecret`). `GET /api/v1/secrets` lists names only; no endpoint returns a value. Names follow the widget id format.
 
 ### History and rollback
 Every accepted config change is stored with a timestamp and author (from a header). Keep the last 20. `POST /api/v1/config/rollback` restores the previous one.
@@ -131,7 +131,7 @@ Every accepted config change is stored with a timestamp and author (from a heade
 | `GET /status` | current data of every widget (what the screen shows, as JSON) |
 | `GET /screenshot` | PNG of the current panel (PixelCopy) so agents can verify changes |
 | `POST /commands` | `reload`, `brightness`, `screen_on`, `screen_off`, `toast`, `identify` (flash the screen) |
-| `PUT /secrets/{name}` / `DELETE /secrets/{name}` | write-only secrets |
+| `GET /secrets` / `PUT /secrets/{name}` / `DELETE /secrets/{name}` | write-only secrets (list returns names only) |
 
 ### Event format
 ```json

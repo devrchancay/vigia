@@ -16,6 +16,9 @@ data class HealthBody(val status: String, val version: String, val uptimeSec: Lo
 @Serializable
 data class ValidationBody(val valid: Boolean)
 
+@Serializable
+data class SecretNamesBody(val names: List<String>)
+
 internal fun ConfigError.toApiError() = ApiError(code = code.name.toSnakeCase(), message = message, path = path)
 
 internal fun List<ConfigError>.toBody() = ApiErrorBody(error = first().toApiError(), errors = map { it.toApiError() })
