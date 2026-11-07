@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="panel_status_title">Panel</string>
-    <string name="panel_status_no_config">Aún no hay widgets configurados.</string>
-    <string name="panel_error">Algo falló al actualizar el panel.</string>
+    <string name="panel_empty">Aún no hay widgets configurados.</string>
+    <string name="panel_error">Algo falló al cargar el panel.</string>
     <string name="panel_retry">Reintentar</string>
+    <string name="widget_unsupported_type">Tipo de widget no soportado: %1$s</string>
+    <string name="widget_missing_param">Falta el parámetro: params.%1$s</string>
 </resources>

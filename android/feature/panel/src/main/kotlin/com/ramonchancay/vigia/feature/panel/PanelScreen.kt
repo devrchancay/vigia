@@ -1,110 +1,105 @@
 package com.ramonchancay.vigia.feature.panel
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.ramonchancay.vigia.core.designsystem.component.PanelTile
 import com.ramonchancay.vigia.core.designsystem.theme.VigiaTheme
+import com.ramonchancay.vigia.core.model.Background
+import com.ramonchancay.vigia.core.model.GridConfig
+import com.ramonchancay.vigia.core.model.PanelConfig
+import com.ramonchancay.vigia.core.model.ThemeMode
+import com.ramonchancay.vigia.core.model.WidgetConfig
+import com.ramonchancay.vigia.core.model.WidgetPosition
+import com.ramonchancay.vigia.feature.panel.grid.PanelGrid
+import com.ramonchancay.vigia.feature.panel.widget.PanelWidget
 import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
-
-internal const val PANEL_TIME_TAG = "panel_time"
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 @Composable
 internal fun PanelRoute(viewModel: PanelViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    PanelScreen(uiState = uiState, onAction = viewModel::onAction)
+    // Passed down as State (not the value) so reading it happens inside the clock widget only.
+    val now = viewModel.now.collectAsStateWithLifecycle()
+    PanelScreen(uiState = uiState, now = now, onAction = viewModel::onAction)
 }
 
 @Composable
 internal fun PanelScreen(
     uiState: PanelUiState,
+    now: State<Instant?>,
     onAction: (PanelAction) -> Unit,
     modifier: Modifier = Modifier,
     zone: ZoneId = ZoneId.systemDefault()
 ) {
-    Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Box(
-            modifier = Modifier.safeDrawingPadding().padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            when (uiState) {
-                PanelUiState.Loading -> CircularProgressIndicator()
-                PanelUiState.Error -> PanelError(onRetry = { onAction(PanelAction.Retry) })
-                is PanelUiState.Ready -> PanelReady(now = uiState.now, zone = zone)
+    when (uiState) {
+        PanelUiState.Loading -> CenteredBox(modifier) { CircularProgressIndicator() }
+
+        PanelUiState.Error -> CenteredBox(modifier) { PanelError(onRetry = { onAction(PanelAction.Retry) }) }
+
+        is PanelUiState.Ready -> VigiaTheme(darkTheme = uiState.config.theme.mode == ThemeMode.Dark) {
+            PanelReady(config = uiState.config, now = now, zone = zone, modifier = modifier)
+        }
+    }
+}
+
+@Composable
+private fun PanelReady(config: PanelConfig, now: State<Instant?>, zone: ZoneId, modifier: Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val background = when (config.theme.background) {
+        Background.Solid -> Brush.linearGradient(listOf(colors.background, colors.background))
+        Background.Gradient -> Brush.verticalGradient(listOf(colors.background, colors.surfaceContainer))
+    }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(background)
+            .safeDrawingPadding()
+            .padding(config.grid.gap.dp)
+    ) {
+        if (config.widgets.isEmpty()) {
+            Text(
+                text = stringResource(R.string.panel_empty),
+                style = MaterialTheme.typography.bodyLarge,
+                color = colors.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.Center)
+            )
+        } else {
+            PanelGrid(grid = config.grid, widgets = config.widgets, modifier = Modifier.fillMaxSize()) { widget ->
+                PanelWidget(widget = widget, now = now, zone = zone)
             }
         }
     }
 }
 
 @Composable
-private fun PanelReady(now: Instant, zone: ZoneId) {
-    val locale = LocalConfiguration.current.locales[0]
-    val timeFormatter = remember(locale) { DateTimeFormatter.ofPattern("HH:mm:ss", locale) }
-    val dateFormatter = remember(locale) { DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(locale) }
-    val local = now.atZone(zone)
-
-    // Landscape layout (the activity is locked to landscape): clock on the left, tiles on the right.
-    Row(
-        modifier = Modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = timeFormatter.format(local),
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.primary,
-                maxLines = 1,
-                // Shrinks the time to fit narrow screens instead of wrapping it onto two lines.
-                autoSize = TextAutoSize.StepBased(
-                    minFontSize = 24.sp,
-                    maxFontSize = MaterialTheme.typography.displayLarge.fontSize
-                ),
-                modifier = Modifier.testTag(PANEL_TIME_TAG)
-            )
-            Text(
-                text = dateFormatter.format(local),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
-            )
-        }
-        PanelTile(title = stringResource(R.string.panel_status_title), modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.panel_status_no_config),
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
-    }
+private fun CenteredBox(modifier: Modifier, content: @Composable () -> Unit) {
+    Box(
+        modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center
+    ) { content() }
 }
 
 @Composable
@@ -113,7 +108,11 @@ private fun PanelError(onRetry: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = stringResource(R.string.panel_error), style = MaterialTheme.typography.bodyLarge)
+        Text(
+            text = stringResource(R.string.panel_error),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onBackground
+        )
         Button(onClick = onRetry) { Text(stringResource(R.string.panel_retry)) }
     }
 }
@@ -121,11 +120,21 @@ private fun PanelError(onRetry: () -> Unit) {
 @Preview(widthDp = 800, heightDp = 360)
 @Composable
 private fun PanelReadyPreview() {
-    VigiaTheme(darkTheme = true) {
-        PanelScreen(
-            uiState = PanelUiState.Ready(Instant.parse("2026-11-06T21:42:07Z")),
-            onAction = {},
-            zone = ZoneId.of("UTC")
+    val config = PanelConfig(
+        schemaVersion = 1,
+        grid = GridConfig(columns = 8, rows = 4),
+        widgets = listOf(
+            WidgetConfig("clock", "clock", WidgetPosition(0, 0, 5, 2)),
+            WidgetConfig("device", "device", WidgetPosition(5, 0, 3, 2)),
+            WidgetConfig(
+                "welcome",
+                "note",
+                WidgetPosition(0, 2, 8, 2),
+                title = "Vigía",
+                params = JsonObject(mapOf("text" to JsonPrimitive("Change this panel remotely.")))
+            )
         )
-    }
+    )
+    val now = remember { mutableStateOf<Instant?>(Instant.parse("2026-11-06T21:42:07Z")) }
+    PanelScreen(uiState = PanelUiState.Ready(config), now = now, onAction = {}, zone = ZoneId.of("UTC"))
 }
