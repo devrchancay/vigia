@@ -28,4 +28,5 @@ rootProject.name = "vigia"
 include(":app")
 include(":core:common")
 include(":core:designsystem")
+include(":core:model")
 include(":feature:panel")
