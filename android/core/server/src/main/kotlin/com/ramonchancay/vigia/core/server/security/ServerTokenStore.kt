@@ -18,7 +18,7 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 @Serializable
-data class ServerSettings(val token: String = "")
+data class ServerSettings(val token: String = "", val setupCompleted: Boolean = false)
 
 /** The API bearer token: generated on first use, stored in app-private storage, rotatable from the setup screen. */
 @Singleton
@@ -30,6 +30,13 @@ class ServerTokenStore @Inject constructor(private val dataStore: DataStore<Serv
         val existing = dataStore.data.first().token
         if (existing.isNotEmpty()) return existing
         return dataStore.updateData { if (it.token.isEmpty()) it.copy(token = newToken()) else it }.token
+    }
+
+    /** False until the owner leaves the setup screen once; the app opens on setup until then. */
+    val setupCompleted: Flow<Boolean> = dataStore.data.map { it.setupCompleted }
+
+    suspend fun markSetupCompleted() {
+        dataStore.updateData { it.copy(setupCompleted = true) }
     }
 
     /** Replaces the token; clients using the old one get 401 from then on. */

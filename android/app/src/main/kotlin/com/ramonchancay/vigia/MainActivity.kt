@@ -6,10 +6,13 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ramonchancay.vigia.core.designsystem.theme.VigiaTheme
 import com.ramonchancay.vigia.core.server.VigiaServerService
 import com.ramonchancay.vigia.navigation.VigiaNavHost
@@ -21,9 +24,13 @@ import dagger.hilt.android.AndroidEntryPoint
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private val viewModel: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
+        // Keep the splash until we know whether to open setup or the panel.
+        splash.setKeepOnScreenCondition { viewModel.startDestination.value == null }
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -34,8 +41,9 @@ class MainActivity : ComponentActivity() {
         }
         hideSystemBars()
         setContent {
+            val startDestination by viewModel.startDestination.collectAsStateWithLifecycle()
             VigiaTheme {
-                VigiaNavHost()
+                startDestination?.let { VigiaNavHost(startDestination = it) }
             }
         }
     }

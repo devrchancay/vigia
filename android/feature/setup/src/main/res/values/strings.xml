@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setup_title">Connect to this panel</string>
+    <string name="setup_instructions">Scan the code with the vigia CLI or use the address and token below. Reach the phone over Tailscale; other networks are blocked. Long-press the panel to come back here.</string>
+    <string name="setup_address">Address</string>
+    <string name="setup_no_network">No network. Connect the phone to Wi-Fi or Tailscale.</string>
+    <string name="setup_token">Token</string>
+    <string name="setup_open_panel">Open panel</string>
+    <string name="setup_rotate">Rotate token</string>
+    <string name="setup_rotate_title">Rotate the token?</string>
+    <string name="setup_rotate_message">Clients using the current token will stop working until you give them the new one.</string>
+    <string name="setup_rotate_confirm">Rotate</string>
+    <string name="setup_cancel">Cancel</string>
+</resources>

@@ -1,7 +1,7 @@
 # Vigía — Android app
 
 Kotlin, Jetpack Compose + Material 3, MVVM, Hilt, type-safe Navigation Compose, Timber.
-minSdk 26, target/compile SDK 37. Milestone status: **M1 renderer done**; next M2 (embedded server) (see [`../docs/SPEC.md`](../docs/SPEC.md#9-milestones)).
+minSdk 26, target/compile SDK 37. Milestone status: **M2 embedded server done**; next M3 (uptime and GitHub Actions sources) (see [`../docs/SPEC.md`](../docs/SPEC.md#9-milestones)).
 
 ## Requirements
 
@@ -26,17 +26,19 @@ app/                     Application, MainActivity (splash, edge-to-edge), Vigia
 build-logic/convention/  Gradle convention plugins shared by every module
 core/common              injected dispatchers (@Dispatcher), Result + asResult(), java.time.Clock binding
 core/model               PanelConfig (kotlinx.serialization), PanelConfigParser, PanelConfigValidator
-core/data                PanelConfigRepository; today it serves assets/panel/default_config.json
+core/data                config in DataStore with history and rollback (PanelConfigRepository/Editor),
+                         bundled default in assets/panel/default_config.json
 core/device              DeviceStatusRepository: battery, temperature, memory, Wi-Fi signal
 core/designsystem        VigiaTheme (ember palette, light/dark, optional dynamic color), PanelTile,
                          rememberNotificationPermissionState (Android 13+)
-feature/panel            PanelScreen + PanelViewModel + ClockRepository: the pattern to copy
+core/server              Ktor server on :8787 in a specialUse foreground service; token, IP allowlist, API
+feature/panel            grid renderer and widgets (clock, note, device): the pattern to copy
+feature/setup            first-run screen: address, token and pairing QR, token rotation
 gradle/libs.versions.toml  every dependency version lives here
 ```
 
 Modules from the spec that are not here yet arrive with the milestone that needs them, so nothing ships unused:
-`DataStore and config history in `core/data` (M2), `core/server` (M2, Ktor),
-Room and OkHttp (M3), `feature/setup` (M2), `feature/sources` (M3).
+`Room, OkHttp and `feature/sources` (M3); events (M4); kiosk (M6).
 
 ### Convention plugins
 
@@ -47,6 +49,36 @@ Room and OkHttp (M3), `feature/setup` (M2), `feature/sources` (M3).
 | `vigia.android.compose` | Compose compiler, BOM, Material 3, tooling |
 | `vigia.hilt` | KSP + Hilt |
 | `vigia.android.feature` | library + compose + hilt + navigation + lifecycle + test stack + `core:common`/`core:designsystem` |
+
+## Remote control (M2)
+
+The app runs an HTTP server on port 8787 while the panel is open (ongoing notification "Vigía is listening").
+The setup screen (first launch, or long-press the panel) shows the address, the token and a pairing QR.
+
+Only loopback and Tailscale (`100.64.0.0/10`) may connect; LAN addresses get 403. From a computer over USB:
+
+```sh
+adb forward tcp:8787 tcp:8787
+export VIGIA=http://127.0.0.1:8787/api/v1 TOKEN=<token from the setup screen>
+curl $VIGIA/health
+curl -H "Authorization: Bearer $TOKEN" $VIGIA/config
+curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "X-Vigia-Author: me" \
+     -d '{"theme":{"palette":"teal"}}' $VIGIA/config          # JSON Merge Patch, applied live
+curl -X POST -H "Authorization: Bearer $TOKEN" $VIGIA/config/rollback
+```
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /health` | liveness, version, uptime (no token) |
+| `GET /config` | current config document |
+| `PUT /config` | replace (validated) |
+| `PATCH /config` | JSON Merge Patch (RFC 7396) |
+| `POST /config/validate` | dry run: `{"valid":true}` or 422 with errors |
+| `POST /config/rollback` | undo the last change (409 when there is nothing to undo) |
+| `GET /config/history` | previous versions, newest first (max 20) |
+
+Errors look like `{"error":{"code","message","path"},"errors":[...]}`: 401 bad token, 403 address not allowed,
+413 body over 64 KB, 422 invalid config (every field error with its path), 429 over 120 requests/min.
 
 ## Performance
 
