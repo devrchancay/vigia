@@ -3,10 +3,10 @@
   "theme": { "mode": "dark", "palette": "ember", "background": "solid" },
   "grid": { "columns": 8, "rows": 4, "gap": 8 },
   "widgets": [
-    { "id": "clock", "type": "clock", "pos": { "x": 0, "y": 0, "w": 5, "h": 2 } },
-    { "id": "device", "type": "device", "pos": { "x": 5, "y": 0, "w": 3, "h": 2 },
+    { "id": "clock", "type": "clock", "pos": { "x": 0, "y": 0, "w": 3, "h": 1 } },
+    { "id": "device", "type": "device", "pos": { "x": 3, "y": 0, "w": 5, "h": 1 },
       "params": { "show": ["battery", "batteryTemp", "memory", "wifi"] } },
-    { "id": "welcome", "type": "note", "title": "Vigía", "pos": { "x": 0, "y": 2, "w": 8, "h": 2 },
+    { "id": "welcome", "type": "note", "title": "Vigía", "pos": { "x": 0, "y": 1, "w": 8, "h": 3 },
       "params": { "text": "This is the default panel. Change it remotely with the vigia CLI, curl or your AI agent." } }
   ]
 }

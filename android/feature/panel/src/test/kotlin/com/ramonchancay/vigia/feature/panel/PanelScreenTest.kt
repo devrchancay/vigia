@@ -34,7 +34,8 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "en-land")
+// Landscape phone size: one row of the default 8x4 grid is about 90 dp, two rows about 190 dp.
+@Config(qualifiers = "en-w800dp-h400dp-land")
 class PanelScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
@@ -186,6 +187,29 @@ class PanelScreenTest {
         composeRule.onNodeWithText("3m 57s").assertExists()
         composeRule.onNodeWithText("✓").assertExists()
         composeRule.onNodeWithText("HTTP 404").assertExists()
+    }
+
+    @Test
+    fun oneRowTilesUseTheCompactLayouts() {
+        val config = PanelConfig(
+            schemaVersion = 1,
+            widgets = listOf(
+                WidgetConfig("clock", "clock", WidgetPosition(0, 0, 3, 1)),
+                WidgetConfig("device", "device", WidgetPosition(3, 0, 5, 1))
+            )
+        )
+        val device = DeviceStatus(
+            battery = BatteryStatus(levelPercent = 92, temperatureCelsius = 34f, isCharging = true),
+            memory = MemoryStatus(availableBytes = 1L shl 30, totalBytes = 2L shl 30),
+            wifi = WifiStatus(isConnected = true, signalLevel = 4)
+        )
+        val data = data(now = Instant.parse("2026-11-07T18:45:51Z"), device = device)
+        composeRule.setContent { PanelScreen(uiState = PanelUiState.Ready(config), data = data, onAction = {}) }
+
+        composeRule.onNodeWithTag(CLOCK_TIME_TAG).assertTextEquals("18:45")
+        composeRule.onNodeWithText("Sat 7 Nov").assertExists()
+        composeRule.onNodeWithText("92% ⚡").assertExists()
+        composeRule.onNodeWithText("1.0/2.0 GB").assertExists()
     }
 
     @Test
