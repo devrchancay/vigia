@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="vigia_ink">#FF0E0F12</color>
+    <color name="vigia_paper">#FFFBF8F5</color>
+    <color name="vigia_ember">#FFFF8A3D</color>
+    <color name="splash_background">@color/vigia_paper</color>
+</resources>

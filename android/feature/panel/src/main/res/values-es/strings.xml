@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="panel_status_title">Panel</string>
+    <string name="panel_status_no_config">Aún no hay widgets configurados.</string>
+    <string name="panel_error">Algo falló al actualizar el panel.</string>
+    <string name="panel_retry">Reintentar</string>
+</resources>
