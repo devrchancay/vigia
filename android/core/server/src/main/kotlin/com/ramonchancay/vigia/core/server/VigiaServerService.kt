@@ -15,14 +15,17 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import com.ramonchancay.vigia.core.common.dispatchers.Dispatcher
 import com.ramonchancay.vigia.core.common.dispatchers.VigiaDispatchers
+import com.ramonchancay.vigia.core.common.task.AlwaysOnTask
 import com.ramonchancay.vigia.core.server.security.ServerTokenStore
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /**
  * Foreground service that keeps the embedded server alive while the panel runs. Uses the `specialUse` type:
@@ -35,6 +38,12 @@ class VigiaServerService : Service() {
 
     @Inject
     lateinit var tokenStore: ServerTokenStore
+
+    /** Pollers and other long-running work contributed by feature modules. */
+    @Inject
+    lateinit var tasks: Set<@JvmSuppressWildcards AlwaysOnTask>
+
+    private var tasksStarted = false
 
     @Inject
     @Dispatcher(VigiaDispatchers.IO)
@@ -49,6 +58,16 @@ class VigiaServerService : Service() {
         // The token exists from the first launch, so the setup screen can show it before any request arrives.
         scope.launch { tokenStore.currentToken() }
         server.start()
+        if (!tasksStarted) {
+            tasksStarted = true
+            tasks.forEach { task ->
+                scope.launch {
+                    runCatching {
+                        task.run()
+                    }.onFailure { if (it !is CancellationException) Timber.e(it, "Always-on task failed") }
+                }
+            }
+        }
         return START_STICKY
     }
 

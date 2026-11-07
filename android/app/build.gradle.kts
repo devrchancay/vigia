@@ -57,6 +57,7 @@ dependencies {
     implementation(projects.core.server)
     implementation(projects.feature.panel)
     implementation(projects.feature.setup)
+    implementation(projects.feature.sources)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)

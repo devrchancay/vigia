@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import com.ramonchancay.vigia.core.common.dispatchers.Dispatcher
 import com.ramonchancay.vigia.core.common.dispatchers.VigiaDispatchers
+import com.ramonchancay.vigia.core.common.task.AlwaysOnTask
 import com.ramonchancay.vigia.core.server.security.ServerSettings
 import com.ramonchancay.vigia.core.server.security.ServerSettingsSerializer
 import dagger.Module
@@ -13,11 +14,20 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.Multibinds
 import java.io.File
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+
+/** Declares the task set so the service works even when no module contributes one. */
+@Module
+@InstallIn(SingletonComponent::class)
+internal interface AlwaysOnTasksModule {
+    @Multibinds
+    fun alwaysOnTasks(): Set<AlwaysOnTask>
+}
 
 @Module
 @InstallIn(SingletonComponent::class)
