@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setup_title">Conéctate a este panel</string>
+    <string name="setup_instructions">Escanea el código con la CLI vigia o usa la dirección y el token de abajo. Accede al teléfono por Tailscale; las demás redes están bloqueadas. Mantén pulsado el panel para volver aquí.</string>
+    <string name="setup_address">Dirección</string>
+    <string name="setup_no_network">Sin red. Conecta el teléfono a Wi-Fi o a Tailscale.</string>
+    <string name="setup_token">Token</string>
+    <string name="setup_open_panel">Abrir panel</string>
+    <string name="setup_rotate">Rotar token</string>
+    <string name="setup_rotate_title">¿Rotar el token?</string>
+    <string name="setup_rotate_message">Los clientes que usan el token actual dejarán de funcionar hasta que les des el nuevo.</string>
+    <string name="setup_rotate_confirm">Rotar</string>
+    <string name="setup_cancel">Cancelar</string>
+</resources>

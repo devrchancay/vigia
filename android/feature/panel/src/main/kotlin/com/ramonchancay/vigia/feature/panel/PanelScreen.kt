@@ -1,6 +1,7 @@
 package com.ramonchancay.vigia.feature.panel
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -45,12 +47,18 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 @Composable
-internal fun PanelRoute(viewModel: PanelViewModel = hiltViewModel()) {
+internal fun PanelRoute(onOpenSetup: () -> Unit, viewModel: PanelViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // Passed down as State (not the value) so each value is read only inside the widget that needs it.
     val now = viewModel.now.collectAsStateWithLifecycle()
     val device = viewModel.device.collectAsStateWithLifecycle()
-    PanelScreen(uiState = uiState, now = now, device = device, onAction = viewModel::onAction)
+    PanelScreen(
+        uiState = uiState,
+        now = now,
+        device = device,
+        onAction = viewModel::onAction,
+        onLongPress = onOpenSetup
+    )
 }
 
 @Composable
@@ -60,6 +68,7 @@ internal fun PanelScreen(
     device: State<DeviceStatus?>,
     onAction: (PanelAction) -> Unit,
     modifier: Modifier = Modifier,
+    onLongPress: () -> Unit = {},
     zone: ZoneId = ZoneId.systemDefault()
 ) {
     val data = remember(now, device, zone) { WidgetData(now = now, device = device, zone = zone) }
@@ -72,13 +81,13 @@ internal fun PanelScreen(
             darkTheme = uiState.config.theme.mode == ThemeMode.Dark,
             palette = VigiaPalette.fromConfigName(uiState.config.theme.palette)
         ) {
-            PanelReady(config = uiState.config, data = data, modifier = modifier)
+            PanelReady(config = uiState.config, data = data, onLongPress = onLongPress, modifier = modifier)
         }
     }
 }
 
 @Composable
-private fun PanelReady(config: PanelConfig, data: WidgetData, modifier: Modifier) {
+private fun PanelReady(config: PanelConfig, data: WidgetData, onLongPress: () -> Unit, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
     val background = when (config.theme.background) {
         Background.Solid -> Brush.linearGradient(listOf(colors.background, colors.background))
@@ -88,6 +97,7 @@ private fun PanelReady(config: PanelConfig, data: WidgetData, modifier: Modifier
         modifier = modifier
             .fillMaxSize()
             .background(background)
+            .pointerInput(onLongPress) { detectTapGestures(onLongPress = { onLongPress() }) }
             .safeDrawingPadding()
             .padding(config.grid.gap.dp)
     ) {

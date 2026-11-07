@@ -56,10 +56,13 @@ dependencies {
     implementation(projects.core.designsystem)
     implementation(projects.core.server)
     implementation(projects.feature.panel)
+    implementation(projects.feature.setup)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.timber)
 }

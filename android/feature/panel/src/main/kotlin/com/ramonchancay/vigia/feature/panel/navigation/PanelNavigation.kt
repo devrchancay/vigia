@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object PanelDestination
 
-fun NavGraphBuilder.panelScreen() {
-    composable<PanelDestination> { PanelRoute() }
+/** [onOpenSetup] runs on a long press anywhere on the panel (the way back to the setup screen). */
+fun NavGraphBuilder.panelScreen(onOpenSetup: () -> Unit) {
+    composable<PanelDestination> { PanelRoute(onOpenSetup = onOpenSetup) }
 }
