@@ -26,6 +26,13 @@ class PanelConfigValidatorTest {
     }
 
     @Test
+    fun `rejects an unknown palette`() {
+        val errors = errorsOf(PanelConfig(schemaVersion = 1, theme = ThemeConfig(palette = "neon")))
+
+        assertEquals(listOf(ConfigError.Code.InvalidFormat to "theme.palette"), errors)
+    }
+
+    @Test
     fun `rejects grid sizes and gap out of range`() {
         val errors = errorsOf(config(grid = GridConfig(columns = 0, rows = 25, gap = 65)))
 

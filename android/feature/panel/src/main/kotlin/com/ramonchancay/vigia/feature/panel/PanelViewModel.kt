@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.ramonchancay.vigia.core.common.result.Result
 import com.ramonchancay.vigia.core.common.result.asResult
 import com.ramonchancay.vigia.core.data.config.PanelConfigRepository
+import com.ramonchancay.vigia.core.device.DeviceStatus
+import com.ramonchancay.vigia.core.device.DeviceStatusRepository
 import com.ramonchancay.vigia.feature.panel.data.ClockRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
@@ -21,8 +23,11 @@ import kotlinx.coroutines.flow.stateIn
 import timber.log.Timber
 
 @HiltViewModel
-class PanelViewModel @Inject constructor(configRepository: PanelConfigRepository, clockRepository: ClockRepository) :
-    ViewModel() {
+class PanelViewModel @Inject constructor(
+    configRepository: PanelConfigRepository,
+    clockRepository: ClockRepository,
+    deviceStatusRepository: DeviceStatusRepository
+) : ViewModel() {
     private val retries = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     /** The layout. Changes only when the config changes, so the grid does not recompose every second. */
@@ -47,6 +52,11 @@ class PanelViewModel @Inject constructor(configRepository: PanelConfigRepository
     /** Current time, kept apart from [uiState] so only time-based widgets recompose on each tick. */
     val now: StateFlow<Instant?> = clockRepository.ticks()
         .catch { Timber.e(it, "Panel clock failed") }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
+
+    /** Battery, memory and Wi-Fi; polled only while the panel is visible. */
+    val device: StateFlow<DeviceStatus?> = deviceStatusRepository.status()
+        .catch { Timber.e(it, "Device status failed") }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
     fun onAction(action: PanelAction) {

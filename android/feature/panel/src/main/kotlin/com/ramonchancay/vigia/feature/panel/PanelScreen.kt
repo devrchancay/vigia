@@ -24,7 +24,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ramonchancay.vigia.core.designsystem.theme.VigiaPalette
 import com.ramonchancay.vigia.core.designsystem.theme.VigiaTheme
+import com.ramonchancay.vigia.core.device.BatteryStatus
+import com.ramonchancay.vigia.core.device.DeviceStatus
+import com.ramonchancay.vigia.core.device.MemoryStatus
+import com.ramonchancay.vigia.core.device.WifiStatus
 import com.ramonchancay.vigia.core.model.Background
 import com.ramonchancay.vigia.core.model.GridConfig
 import com.ramonchancay.vigia.core.model.PanelConfig
@@ -33,6 +38,7 @@ import com.ramonchancay.vigia.core.model.WidgetConfig
 import com.ramonchancay.vigia.core.model.WidgetPosition
 import com.ramonchancay.vigia.feature.panel.grid.PanelGrid
 import com.ramonchancay.vigia.feature.panel.widget.PanelWidget
+import com.ramonchancay.vigia.feature.panel.widget.WidgetData
 import java.time.Instant
 import java.time.ZoneId
 import kotlinx.serialization.json.JsonObject
@@ -41,32 +47,38 @@ import kotlinx.serialization.json.JsonPrimitive
 @Composable
 internal fun PanelRoute(viewModel: PanelViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    // Passed down as State (not the value) so reading it happens inside the clock widget only.
+    // Passed down as State (not the value) so each value is read only inside the widget that needs it.
     val now = viewModel.now.collectAsStateWithLifecycle()
-    PanelScreen(uiState = uiState, now = now, onAction = viewModel::onAction)
+    val device = viewModel.device.collectAsStateWithLifecycle()
+    PanelScreen(uiState = uiState, now = now, device = device, onAction = viewModel::onAction)
 }
 
 @Composable
 internal fun PanelScreen(
     uiState: PanelUiState,
     now: State<Instant?>,
+    device: State<DeviceStatus?>,
     onAction: (PanelAction) -> Unit,
     modifier: Modifier = Modifier,
     zone: ZoneId = ZoneId.systemDefault()
 ) {
+    val data = remember(now, device, zone) { WidgetData(now = now, device = device, zone = zone) }
     when (uiState) {
         PanelUiState.Loading -> CenteredBox(modifier) { CircularProgressIndicator() }
 
         PanelUiState.Error -> CenteredBox(modifier) { PanelError(onRetry = { onAction(PanelAction.Retry) }) }
 
-        is PanelUiState.Ready -> VigiaTheme(darkTheme = uiState.config.theme.mode == ThemeMode.Dark) {
-            PanelReady(config = uiState.config, now = now, zone = zone, modifier = modifier)
+        is PanelUiState.Ready -> VigiaTheme(
+            darkTheme = uiState.config.theme.mode == ThemeMode.Dark,
+            palette = VigiaPalette.fromConfigName(uiState.config.theme.palette)
+        ) {
+            PanelReady(config = uiState.config, data = data, modifier = modifier)
         }
     }
 }
 
 @Composable
-private fun PanelReady(config: PanelConfig, now: State<Instant?>, zone: ZoneId, modifier: Modifier) {
+private fun PanelReady(config: PanelConfig, data: WidgetData, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
     val background = when (config.theme.background) {
         Background.Solid -> Brush.linearGradient(listOf(colors.background, colors.background))
@@ -88,7 +100,7 @@ private fun PanelReady(config: PanelConfig, now: State<Instant?>, zone: ZoneId, 
             )
         } else {
             PanelGrid(grid = config.grid, widgets = config.widgets, modifier = Modifier.fillMaxSize()) { widget ->
-                PanelWidget(widget = widget, now = now, zone = zone)
+                PanelWidget(widget = widget, data = data)
             }
         }
     }
@@ -136,5 +148,15 @@ private fun PanelReadyPreview() {
         )
     )
     val now = remember { mutableStateOf<Instant?>(Instant.parse("2026-11-06T21:42:07Z")) }
-    PanelScreen(uiState = PanelUiState.Ready(config), now = now, onAction = {}, zone = ZoneId.of("UTC"))
+    val device = remember {
+        mutableStateOf<DeviceStatus?>(
+            DeviceStatus(
+                battery = BatteryStatus(levelPercent = 80, temperatureCelsius = 31.5f, isCharging = true),
+                memory = MemoryStatus(availableBytes = 1_200_000_000, totalBytes = 3_000_000_000),
+                wifi = WifiStatus(isConnected = true, signalLevel = 3)
+            )
+        )
+    }
+    PanelScreen(uiState = PanelUiState.Ready(config), now = now, device = device, onAction = {
+    }, zone = ZoneId.of("UTC"))
 }
