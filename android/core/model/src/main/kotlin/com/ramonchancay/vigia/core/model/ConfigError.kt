@@ -12,6 +12,7 @@ data class ConfigError(val code: Code, val path: String, val message: String) {
         InvalidFormat,
         DuplicateId,
         OutOfGrid,
-        Overlap
+        Overlap,
+        NothingToRollback
     }
 }
