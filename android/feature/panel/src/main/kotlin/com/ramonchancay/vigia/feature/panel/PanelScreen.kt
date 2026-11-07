@@ -3,10 +3,11 @@ package com.ramonchancay.vigia.feature.panel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +23,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ramonchancay.vigia.core.designsystem.component.PanelTile
@@ -67,23 +69,36 @@ private fun PanelReady(now: Instant, zone: ZoneId) {
     val dateFormatter = remember(locale) { DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(locale) }
     val local = now.atZone(zone)
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    // Landscape layout (the activity is locked to landscape): clock on the left, tiles on the right.
+    Row(
+        modifier = Modifier.fillMaxSize(),
+        horizontalArrangement = Arrangement.spacedBy(24.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = timeFormatter.format(local),
-            style = MaterialTheme.typography.displayLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.testTag(PANEL_TIME_TAG)
-        )
-        Text(
-            text = dateFormatter.format(local),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        PanelTile(title = stringResource(R.string.panel_status_title), modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = timeFormatter.format(local),
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                // Shrinks the time to fit narrow screens instead of wrapping it onto two lines.
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = 24.sp,
+                    maxFontSize = MaterialTheme.typography.displayLarge.fontSize
+                ),
+                modifier = Modifier.testTag(PANEL_TIME_TAG)
+            )
+            Text(
+                text = dateFormatter.format(local),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+        PanelTile(title = stringResource(R.string.panel_status_title), modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.panel_status_no_config),
                 style = MaterialTheme.typography.bodyLarge
@@ -103,7 +118,7 @@ private fun PanelError(onRetry: () -> Unit) {
     }
 }
 
-@Preview(widthDp = 360, heightDp = 800)
+@Preview(widthDp = 800, heightDp = 360)
 @Composable
 private fun PanelReadyPreview() {
     VigiaTheme(darkTheme = true) {

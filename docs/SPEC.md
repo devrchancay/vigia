@@ -48,6 +48,7 @@ Kotlin, Jetpack Compose + Material 3, MVVM (ViewModel + StateFlow, UiState + eve
 
 ### Runtime behavior
 - `PanelActivity` is fullscreen, edge-to-edge, immersive, `FLAG_KEEP_SCREEN_ON`.
+- Always landscape (`sensorLandscape`: either landscape side, following the sensor). The panel is designed for a phone lying on its side on a desk stand; the grid is laid out for landscape.
 - `VigiaService` foreground service hosts the Ktor server and pollers. Use `specialUse` foreground service type with a clear property description (`dataSync` has a 6 h/day limit on Android 15+). Started on boot (`BOOT_COMPLETED`) and by the activity.
 - Kiosk: if the app is device owner, enable lock task mode and set itself as persistent preferred HOME. If not, run as a normal app and show the setup checklist.
 - Night schedule: window brightness (no `WRITE_SETTINGS` needed) and optional dimmed layout.
@@ -196,6 +197,5 @@ Work in small steps, each one reviewable and runnable.
 ## 10. Open questions
 
 - Themes: ship 3–4 palettes inspired by the Fósil look (ember, teal, indigo) or allow raw colors in config?
-- Landscape support for tablets (grid columns adapt?)
 - Multiple pages/screens swiped or rotated on a timer?
 - Should the phone also expose its own tiles as actions (e.g. "re-run CI") or stay read-only in v1? Proposal: read-only in v1.
