@@ -1,10 +1,8 @@
 name: Android
 
 on:
+  # No path filter on PRs: `build` is a required check on main, so it must report on every PR.
   pull_request:
-    paths:
-      - "android/**"
-      - ".github/workflows/android.yml"
   push:
     branches: [main]
     paths:
