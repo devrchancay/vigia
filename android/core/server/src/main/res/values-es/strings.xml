@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="server_channel_name">Servidor de control remoto</string>
+    <string name="server_notification_title">Vigía está escuchando</string>
+    <string name="server_notification_text">Control remoto en el puerto %1$d</string>
+</resources>

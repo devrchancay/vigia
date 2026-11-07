@@ -11,6 +11,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.ramonchancay.vigia.core.designsystem.theme.VigiaTheme
+import com.ramonchancay.vigia.core.server.VigiaServerService
 import com.ramonchancay.vigia.navigation.VigiaNavHost
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -37,6 +38,12 @@ class MainActivity : ComponentActivity() {
                 VigiaNavHost()
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // The remote-control server runs as a foreground service; starting it again is a no-op.
+        VigiaServerService.start(this)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
