@@ -12,4 +12,8 @@
     <string name="device_memory">Memoria</string>
     <string name="device_wifi">Wi-Fi</string>
     <string name="device_wifi_off">Sin conexión</string>
+    <string name="uptime_title">Disponibilidad</string>
+    <string name="github_title">CI</string>
+    <string name="source_pending">comprobando…</string>
+    <string name="github_no_runs">sin ejecuciones</string>
 </resources>

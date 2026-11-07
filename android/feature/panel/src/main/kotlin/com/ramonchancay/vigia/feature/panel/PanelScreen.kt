@@ -13,7 +13,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,26 +51,21 @@ internal fun PanelRoute(onOpenSetup: () -> Unit, viewModel: PanelViewModel = hil
     // Passed down as State (not the value) so each value is read only inside the widget that needs it.
     val now = viewModel.now.collectAsStateWithLifecycle()
     val device = viewModel.device.collectAsStateWithLifecycle()
-    PanelScreen(
-        uiState = uiState,
-        now = now,
-        device = device,
-        onAction = viewModel::onAction,
-        onLongPress = onOpenSetup
-    )
+    val uptime = viewModel.uptime.collectAsStateWithLifecycle()
+    val workflows = viewModel.workflows.collectAsStateWithLifecycle()
+    val zone = remember { ZoneId.systemDefault() }
+    val data = remember(now, device, uptime, workflows, zone) { WidgetData(now, device, uptime, workflows, zone) }
+    PanelScreen(uiState = uiState, data = data, onAction = viewModel::onAction, onLongPress = onOpenSetup)
 }
 
 @Composable
 internal fun PanelScreen(
     uiState: PanelUiState,
-    now: State<Instant?>,
-    device: State<DeviceStatus?>,
+    data: WidgetData,
     onAction: (PanelAction) -> Unit,
     modifier: Modifier = Modifier,
-    onLongPress: () -> Unit = {},
-    zone: ZoneId = ZoneId.systemDefault()
+    onLongPress: () -> Unit = {}
 ) {
-    val data = remember(now, device, zone) { WidgetData(now = now, device = device, zone = zone) }
     when (uiState) {
         PanelUiState.Loading -> CenteredBox(modifier) { CircularProgressIndicator() }
 
@@ -157,16 +151,20 @@ private fun PanelReadyPreview() {
             )
         )
     )
-    val now = remember { mutableStateOf<Instant?>(Instant.parse("2026-11-06T21:42:07Z")) }
-    val device = remember {
-        mutableStateOf<DeviceStatus?>(
-            DeviceStatus(
-                battery = BatteryStatus(levelPercent = 80, temperatureCelsius = 31.5f, isCharging = true),
-                memory = MemoryStatus(availableBytes = 1_200_000_000, totalBytes = 3_000_000_000),
-                wifi = WifiStatus(isConnected = true, signalLevel = 3)
-            )
+    val data = remember {
+        WidgetData(
+            now = mutableStateOf(Instant.parse("2026-11-06T21:42:07Z")),
+            device = mutableStateOf(
+                DeviceStatus(
+                    battery = BatteryStatus(levelPercent = 80, temperatureCelsius = 31.5f, isCharging = true),
+                    memory = MemoryStatus(availableBytes = 1_200_000_000, totalBytes = 3_000_000_000),
+                    wifi = WifiStatus(isConnected = true, signalLevel = 3)
+                )
+            ),
+            uptime = mutableStateOf(emptyMap()),
+            workflows = mutableStateOf(emptyMap()),
+            zone = ZoneId.of("UTC")
         )
     }
-    PanelScreen(uiState = PanelUiState.Ready(config), now = now, device = device, onAction = {
-    }, zone = ZoneId.of("UTC"))
+    PanelScreen(uiState = PanelUiState.Ready(config), data = data, onAction = {})
 }

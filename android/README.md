@@ -1,7 +1,7 @@
 # Vigía — Android app
 
 Kotlin, Jetpack Compose + Material 3, MVVM, Hilt, type-safe Navigation Compose, Timber.
-minSdk 26, target/compile SDK 37. Milestone status: **M2 embedded server done**; next M3 (uptime and GitHub Actions sources) (see [`../docs/SPEC.md`](../docs/SPEC.md#9-milestones)).
+minSdk 26, target/compile SDK 37. Milestone status: **M3 sources done**; next M4 (events, agents and feed widgets) (see [`../docs/SPEC.md`](../docs/SPEC.md#9-milestones)).
 
 ## Requirements
 
@@ -27,18 +27,20 @@ build-logic/convention/  Gradle convention plugins shared by every module
 core/common              injected dispatchers (@Dispatcher), Result + asResult(), java.time.Clock binding
 core/model               PanelConfig (kotlinx.serialization), PanelConfigParser, PanelConfigValidator
 core/data                config in DataStore with history and rollback (PanelConfigRepository/Editor),
-                         bundled default in assets/panel/default_config.json
+                         bundled default in assets/panel/default_config.json; Keystore-encrypted secrets;
+                         Room status store (latest state per polled source)
 core/device              DeviceStatusRepository: battery, temperature, memory, Wi-Fi signal
 core/designsystem        VigiaTheme (ember palette, light/dark, optional dynamic color), PanelTile,
                          rememberNotificationPermissionState (Android 13+)
 core/server              Ktor server on :8787 in a specialUse foreground service; token, IP allowlist, API
-feature/panel            grid renderer and widgets (clock, note, device): the pattern to copy
+feature/panel            grid renderer and widgets (clock, note, device, uptime, github_actions): the pattern to copy
 feature/setup            first-run screen: address, token and pairing QR, token rotation
+feature/sources          pollers run by the server service: uptime (OkHttp) and GitHub Actions (REST + ETag)
 gradle/libs.versions.toml  every dependency version lives here
 ```
 
 Modules from the spec that are not here yet arrive with the milestone that needs them, so nothing ships unused:
-`Room, OkHttp and `feature/sources` (M3); events (M4); kiosk (M6).
+`events (M4); CLI and MCP (M5); kiosk (M6).
 
 ### Convention plugins
 
@@ -76,6 +78,10 @@ curl -X POST -H "Authorization: Bearer $TOKEN" $VIGIA/config/rollback
 | `POST /config/validate` | dry run: `{"valid":true}` or 422 with errors |
 | `POST /config/rollback` | undo the last change (409 when there is nothing to undo) |
 | `GET /config/history` | previous versions, newest first (max 20) |
+| `GET /status` | what every widget shows now (uptime, runs, device, clock, notes) |
+| `GET /secrets` | secret names (never values) |
+| `PUT /secrets/{name}` | store a secret, raw value as the body (e.g. a GitHub token for `tokenSecret`) |
+| `DELETE /secrets/{name}` | remove a secret |
 
 Errors look like `{"error":{"code","message","path"},"errors":[...]}`: 401 bad token, 403 address not allowed,
 413 body over 64 KB, 422 invalid config (every field error with its path), 429 over 120 requests/min.

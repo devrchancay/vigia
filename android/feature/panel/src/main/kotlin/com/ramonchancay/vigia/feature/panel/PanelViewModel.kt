@@ -5,8 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.ramonchancay.vigia.core.common.result.Result
 import com.ramonchancay.vigia.core.common.result.asResult
 import com.ramonchancay.vigia.core.data.config.PanelConfigRepository
+import com.ramonchancay.vigia.core.data.status.StatusRepository
 import com.ramonchancay.vigia.core.device.DeviceStatus
 import com.ramonchancay.vigia.core.device.DeviceStatusRepository
+import com.ramonchancay.vigia.core.model.UptimeStatus
+import com.ramonchancay.vigia.core.model.WorkflowRunStatus
 import com.ramonchancay.vigia.feature.panel.data.ClockRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
@@ -26,7 +29,8 @@ import timber.log.Timber
 class PanelViewModel @Inject constructor(
     configRepository: PanelConfigRepository,
     clockRepository: ClockRepository,
-    deviceStatusRepository: DeviceStatusRepository
+    deviceStatusRepository: DeviceStatusRepository,
+    statusRepository: StatusRepository
 ) : ViewModel() {
     private val retries = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
@@ -58,6 +62,16 @@ class PanelViewModel @Inject constructor(
     val device: StateFlow<DeviceStatus?> = deviceStatusRepository.status()
         .catch { Timber.e(it, "Device status failed") }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
+
+    /** Latest uptime check per URL, written by the pollers in the always-on service. */
+    val uptime: StateFlow<Map<String, UptimeStatus>> = statusRepository.uptime
+        .catch { Timber.e(it, "Uptime status failed") }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyMap())
+
+    /** Latest GitHub Actions run per source key. */
+    val workflows: StateFlow<Map<String, WorkflowRunStatus>> = statusRepository.workflows
+        .catch { Timber.e(it, "Workflow status failed") }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyMap())
 
     fun onAction(action: PanelAction) {
         when (action) {

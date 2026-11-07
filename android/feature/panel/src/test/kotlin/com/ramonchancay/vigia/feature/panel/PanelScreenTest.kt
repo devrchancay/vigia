@@ -11,12 +11,18 @@ import com.ramonchancay.vigia.core.device.BatteryStatus
 import com.ramonchancay.vigia.core.device.DeviceStatus
 import com.ramonchancay.vigia.core.device.MemoryStatus
 import com.ramonchancay.vigia.core.device.WifiStatus
+import com.ramonchancay.vigia.core.model.ConfigParseResult
 import com.ramonchancay.vigia.core.model.PanelConfig
+import com.ramonchancay.vigia.core.model.PanelConfigParser
+import com.ramonchancay.vigia.core.model.UptimeStatus
 import com.ramonchancay.vigia.core.model.WidgetConfig
 import com.ramonchancay.vigia.core.model.WidgetPosition
+import com.ramonchancay.vigia.core.model.WorkflowRunStatus
 import com.ramonchancay.vigia.feature.panel.widget.CLOCK_TIME_TAG
 import com.ramonchancay.vigia.feature.panel.widget.DEVICE_ROW_TAG
+import com.ramonchancay.vigia.feature.panel.widget.WidgetData
 import java.time.Instant
+import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -33,7 +39,13 @@ class PanelScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private val noDevice = mutableStateOf<DeviceStatus?>(null)
+    private fun data(
+        now: Instant? = null,
+        device: DeviceStatus? = null,
+        uptime: Map<String, UptimeStatus> = emptyMap(),
+        workflows: Map<String, WorkflowRunStatus> = emptyMap(),
+        zone: ZoneId = ZoneOffset.UTC
+    ) = WidgetData(mutableStateOf(now), mutableStateOf(device), mutableStateOf(uptime), mutableStateOf(workflows), zone)
 
     private val config = PanelConfig(
         schemaVersion = 1,
@@ -53,11 +65,8 @@ class PanelScreenTest {
 
     @Test
     fun rendersEachWidgetByType() {
-        val now = mutableStateOf<Instant?>(Instant.parse("2026-11-06T21:42:07Z"))
-        composeRule.setContent {
-            PanelScreen(uiState = PanelUiState.Ready(config), now = now, device = noDevice, onAction = {
-            }, zone = ZoneOffset.ofHours(-5))
-        }
+        val data = data(now = Instant.parse("2026-11-06T21:42:07Z"), zone = ZoneOffset.ofHours(-5))
+        composeRule.setContent { PanelScreen(uiState = PanelUiState.Ready(config), data = data, onAction = {}) }
 
         composeRule.onNodeWithTag(CLOCK_TIME_TAG).assertTextEquals("16:42:07")
         composeRule.onNodeWithText("Ship M1").assertExists()
@@ -68,10 +77,15 @@ class PanelScreenTest {
     @Test
     fun clockFollowsTicks() {
         val now = mutableStateOf<Instant?>(Instant.parse("2026-11-06T21:42:07Z"))
-        composeRule.setContent {
-            PanelScreen(uiState = PanelUiState.Ready(config), now = now, device = noDevice, onAction = {
-            }, zone = ZoneOffset.UTC)
-        }
+        val data =
+            WidgetData(
+                now,
+                mutableStateOf(null),
+                mutableStateOf(emptyMap()),
+                mutableStateOf(emptyMap()),
+                ZoneOffset.UTC
+            )
+        composeRule.setContent { PanelScreen(uiState = PanelUiState.Ready(config), data = data, onAction = {}) }
 
         now.value = Instant.parse("2026-11-06T21:42:08Z")
 
@@ -80,12 +94,10 @@ class PanelScreenTest {
 
     @Test
     fun deviceWidgetShowsTheRequestedRows() {
-        val device = mutableStateOf<DeviceStatus?>(
-            DeviceStatus(
-                battery = BatteryStatus(levelPercent = 80, temperatureCelsius = 41f, isCharging = true),
-                memory = MemoryStatus(availableBytes = 1L shl 30, totalBytes = 3L shl 30),
-                wifi = WifiStatus(isConnected = true, signalLevel = 3)
-            )
+        val device = DeviceStatus(
+            battery = BatteryStatus(levelPercent = 80, temperatureCelsius = 41f, isCharging = true),
+            memory = MemoryStatus(availableBytes = 1L shl 30, totalBytes = 3L shl 30),
+            wifi = WifiStatus(isConnected = true, signalLevel = 3)
         )
         val config = PanelConfig(
             schemaVersion = 1,
@@ -106,10 +118,8 @@ class PanelScreenTest {
                 )
             )
         )
-        val now = mutableStateOf<Instant?>(null)
-        composeRule.setContent {
-            PanelScreen(uiState = PanelUiState.Ready(config), now = now, device = device, onAction = {})
-        }
+        val data = data(device = device)
+        composeRule.setContent { PanelScreen(uiState = PanelUiState.Ready(config), data = data, onAction = {}) }
 
         composeRule.onNodeWithText("80% · charging").assertExists()
         composeRule.onNodeWithText("2.0 / 3.0 GB").assertExists()
@@ -119,18 +129,69 @@ class PanelScreenTest {
     }
 
     @Test
-    fun emptyConfigShowsAHint() {
-        val now = mutableStateOf<Instant?>(null)
-        composeRule.setContent {
-            PanelScreen(
-                uiState = PanelUiState.Ready(
-                    PanelConfig(schemaVersion = 1)
-                ),
-                now = now,
-                device = noDevice,
-                onAction = {
-                }
+    fun uptimeAndGithubWidgetsShowLiveStatus() {
+        val now = Instant.parse("2026-11-07T12:00:00Z").toEpochMilli()
+        val config = (
+            PanelConfigParser.parse(
+                """
+                {"schemaVersion":1,"widgets":[
+                  {"id":"sites","type":"uptime","pos":{"x":0,"y":0,"w":4,"h":4},"params":{"targets":[
+                    {"name":"site","url":"https://example.com"},
+                    {"name":"api","url":"https://api.example.com"},
+                    {"name":"new","url":"https://new.example.com"}]}},
+                  {"id":"ci","type":"github_actions","pos":{"x":4,"y":0,"w":4,"h":4},"params":{"repos":["owner/repo","owner/broken"],"branch":"main"}}
+                ]}
+                """.trimIndent()
+            ) as ConfigParseResult.Valid
+            ).config
+        val uptime = mapOf(
+            "https://example.com" to UptimeStatus(
+                "https://example.com",
+                true,
+                200,
+                120,
+                null,
+                now,
+                now - 3 * 3_600_000
+            ),
+            "https://api.example.com" to
+                UptimeStatus("https://api.example.com", false, 503, 40, null, now, now - 5 * 60_000)
+        )
+        val workflows = mapOf(
+            "owner/repo|main|" to WorkflowRunStatus(
+                key = "owner/repo|main|",
+                repo = "owner/repo",
+                runName = "CI",
+                status = "completed",
+                conclusion = "success",
+                startedAtMillis = now - 237_000,
+                updatedAtMillis = now,
+                checkedAtMillis = now
+            ),
+            "owner/broken|main|" to WorkflowRunStatus(
+                key = "owner/broken|main|",
+                repo = "owner/broken",
+                error = "HTTP 404",
+                checkedAtMillis = now
             )
+        )
+        val data = data(now = Instant.ofEpochMilli(now), uptime = uptime, workflows = workflows)
+        composeRule.setContent { PanelScreen(uiState = PanelUiState.Ready(config), data = data, onAction = {}) }
+
+        composeRule.onNodeWithText("120 ms").assertExists()
+        composeRule.onNodeWithText("3h").assertExists()
+        composeRule.onNodeWithText("HTTP 503").assertExists()
+        composeRule.onNodeWithText("5m").assertExists()
+        composeRule.onNodeWithText("checking…").assertExists()
+        composeRule.onNodeWithText("3m 57s").assertExists()
+        composeRule.onNodeWithText("✓").assertExists()
+        composeRule.onNodeWithText("HTTP 404").assertExists()
+    }
+
+    @Test
+    fun emptyConfigShowsAHint() {
+        composeRule.setContent {
+            PanelScreen(uiState = PanelUiState.Ready(PanelConfig(schemaVersion = 1)), data = data(), onAction = {})
         }
 
         composeRule.onNodeWithText("No widgets configured yet.").assertExists()
@@ -139,10 +200,8 @@ class PanelScreenTest {
     @Test
     fun errorStateSendsRetry() {
         val actions = mutableListOf<PanelAction>()
-        val now = mutableStateOf<Instant?>(null)
-        composeRule.setContent {
-            PanelScreen(uiState = PanelUiState.Error, now = now, device = noDevice, onAction = { actions += it })
-        }
+        val data = data()
+        composeRule.setContent { PanelScreen(uiState = PanelUiState.Error, data = data, onAction = { actions += it }) }
 
         composeRule.onNodeWithText("Retry").performClick()
 

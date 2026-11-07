@@ -2,6 +2,7 @@ package com.ramonchancay.vigia.feature.panel
 
 import app.cash.turbine.test
 import com.ramonchancay.vigia.core.data.config.PanelConfigRepository
+import com.ramonchancay.vigia.core.data.status.StatusRepository
 import com.ramonchancay.vigia.core.device.DeviceStatusRepository
 import com.ramonchancay.vigia.core.model.GridConfig
 import com.ramonchancay.vigia.core.model.PanelConfig
@@ -27,12 +28,16 @@ class PanelViewModelTest {
     private val configRepository = mockk<PanelConfigRepository>()
     private val clockRepository = mockk<ClockRepository> { every { ticks() } returns emptyFlow() }
     private val deviceRepository = mockk<DeviceStatusRepository> { every { status(any()) } returns emptyFlow() }
+    private val statusRepository = mockk<StatusRepository> {
+        every { uptime } returns emptyFlow()
+        every { workflows } returns emptyFlow()
+    }
 
     @Test
     fun `starts loading and shows each config`() = runTest {
         val configs = MutableSharedFlow<PanelConfig>()
         every { configRepository.config } returns configs
-        val viewModel = PanelViewModel(configRepository, clockRepository, deviceRepository)
+        val viewModel = PanelViewModel(configRepository, clockRepository, deviceRepository, statusRepository)
 
         viewModel.uiState.test {
             assertEquals(PanelUiState.Loading, awaitItem())
@@ -54,7 +59,7 @@ class PanelViewModelTest {
             },
             configsAfterRetry
         )
-        val viewModel = PanelViewModel(configRepository, clockRepository, deviceRepository)
+        val viewModel = PanelViewModel(configRepository, clockRepository, deviceRepository, statusRepository)
 
         viewModel.uiState.test {
             assertEquals(PanelUiState.Loading, awaitItem())
@@ -75,7 +80,7 @@ class PanelViewModelTest {
         val ticks = MutableSharedFlow<Instant>()
         every { configRepository.config } returns emptyFlow()
         every { clockRepository.ticks() } returns ticks
-        val viewModel = PanelViewModel(configRepository, clockRepository, deviceRepository)
+        val viewModel = PanelViewModel(configRepository, clockRepository, deviceRepository, statusRepository)
 
         viewModel.now.test {
             assertNull(awaitItem())
@@ -91,7 +96,7 @@ class PanelViewModelTest {
             emit(FIRST)
             throw IllegalStateException("clock broke")
         }
-        val viewModel = PanelViewModel(configRepository, clockRepository, deviceRepository)
+        val viewModel = PanelViewModel(configRepository, clockRepository, deviceRepository, statusRepository)
 
         viewModel.now.test {
             assertEquals(FIRST, awaitItem())
