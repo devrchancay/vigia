@@ -3,6 +3,7 @@ package com.ramonchancay.vigia.core.server
 import android.content.Context
 import android.os.SystemClock
 import com.ramonchancay.vigia.core.data.config.PanelConfigEditor
+import com.ramonchancay.vigia.core.data.secrets.SecretStore
 import com.ramonchancay.vigia.core.server.api.ApiDependencies
 import com.ramonchancay.vigia.core.server.api.vigiaApi
 import com.ramonchancay.vigia.core.server.security.IpAllowlist
@@ -20,6 +21,7 @@ import timber.log.Timber
 class VigiaServer @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val editor: PanelConfigEditor,
+    private val secrets: SecretStore,
     private val tokenStore: ServerTokenStore
 ) {
     private var server: EmbeddedServer<*, *>? = null
@@ -33,6 +35,7 @@ class VigiaServer @Inject constructor(
         startedAt = SystemClock.elapsedRealtime()
         val deps = ApiDependencies(
             editor = editor,
+            secrets = secrets,
             tokenMatches = tokenStore::matches,
             isAllowed = IpAllowlist.DEFAULT::allows,
             appVersion = appVersion(),

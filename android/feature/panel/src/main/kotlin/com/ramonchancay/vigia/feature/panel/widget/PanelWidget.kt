@@ -4,14 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.ramonchancay.vigia.core.model.WidgetConfig
+import com.ramonchancay.vigia.core.model.WidgetTypes
 import com.ramonchancay.vigia.feature.panel.R
-
-/** Widget types this version can render. Anything else becomes an error tile. */
-internal object WidgetTypes {
-    const val CLOCK = "clock"
-    const val NOTE = "note"
-    const val DEVICE = "device"
-}
 
 /** Renders one widget by its type; never throws for an unknown type or bad params. */
 @Composable

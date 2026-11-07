@@ -4,8 +4,7 @@
     <string name="panel_error">Something went wrong while loading the panel.</string>
     <string name="panel_retry">Retry</string>
     <string name="widget_unsupported_type">Unsupported widget type: %1$s</string>
-    <string name="widget_missing_param">Missing parameter: params.%1$s</string>
-    <string name="widget_invalid_param">Invalid parameter: params.%1$s</string>
+    <string name="widget_invalid_param">Invalid parameter: %1$s</string>
     <string name="device_title">Device</string>
     <string name="device_battery">Battery</string>
     <string name="device_charging">%1$s · charging</string>

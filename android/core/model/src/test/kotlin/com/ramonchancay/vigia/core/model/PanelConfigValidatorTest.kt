@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PanelConfigValidatorTest {
-    private fun widget(id: String, x: Int, y: Int, w: Int = 1, h: Int = 1, type: String = "note") =
+    private fun widget(id: String, x: Int, y: Int, w: Int = 1, h: Int = 1, type: String = "clock") =
         WidgetConfig(id = id, type = type, pos = WidgetPosition(x, y, w, h))
 
     private fun config(vararg widgets: WidgetConfig, grid: GridConfig = GridConfig(), night: NightConfig? = null) =
@@ -130,6 +130,20 @@ class PanelConfigValidatorTest {
         val errors = errorsOf(config(widget("a", 0, 0, w = 5), widget("b", 0, 0), grid = GridConfig(columns = 0)))
 
         assertEquals(listOf(ConfigError.Code.OutOfRange to "grid.columns"), errors)
+    }
+
+    @Test
+    fun `params errors carry the full widget path`() {
+        val note = WidgetConfig(
+            id = "todo",
+            type = "note",
+            pos = WidgetPosition(0, 0, 1, 1),
+            params = kotlinx.serialization.json.JsonObject(
+                mapOf("text" to kotlinx.serialization.json.JsonPrimitive(" "))
+            )
+        )
+
+        assertEquals(listOf(ConfigError.Code.InvalidFormat to "widgets[0].params.text"), errorsOf(config(note)))
     }
 
     @Test

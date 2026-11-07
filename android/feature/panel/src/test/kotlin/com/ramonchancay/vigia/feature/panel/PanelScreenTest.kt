@@ -62,7 +62,7 @@ class PanelScreenTest {
         composeRule.onNodeWithTag(CLOCK_TIME_TAG).assertTextEquals("16:42:07")
         composeRule.onNodeWithText("Ship M1").assertExists()
         composeRule.onNodeWithText("Unsupported widget type: hologram").assertExists()
-        composeRule.onNodeWithText("Missing parameter: params.text").assertExists()
+        composeRule.onNodeWithText("Invalid parameter: params").assertExists()
     }
 
     @Test
@@ -115,7 +115,7 @@ class PanelScreenTest {
         composeRule.onNodeWithText("2.0 / 3.0 GB").assertExists()
         composeRule.onNodeWithText("●●●○").assertExists()
         composeRule.onNodeWithTag(DEVICE_ROW_TAG + "batteryTemp").assertDoesNotExist()
-        composeRule.onNodeWithText("Invalid parameter: params.show").assertExists()
+        composeRule.onNodeWithText("Invalid parameter: params.show[0]").assertExists()
     }
 
     @Test

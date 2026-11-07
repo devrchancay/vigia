@@ -3,7 +3,9 @@ package com.ramonchancay.vigia.core.server.api
 import androidx.datastore.core.DataStoreFactory
 import com.ramonchancay.vigia.core.data.config.ConfigArchive
 import com.ramonchancay.vigia.core.data.config.StoredPanelConfigRepository
+import com.ramonchancay.vigia.core.data.secrets.SecretStore
 import com.ramonchancay.vigia.core.model.PanelConfig
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.patch
@@ -44,6 +46,21 @@ class VigiaApiTest {
     private val storeScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val token = "test-token"
 
+    /** In-memory secrets: the API layer is what is under test here. */
+    private val secrets = object : SecretStore {
+        val values = mutableMapOf<String, String>()
+
+        override suspend fun put(name: String, value: String) {
+            values[name] = value
+        }
+
+        override suspend fun delete(name: String) = values.remove(name) != null
+
+        override suspend fun get(name: String) = values[name]
+
+        override suspend fun names() = values.keys.sorted()
+    }
+
     @After
     fun tearDown() = storeScope.cancel()
 
@@ -61,6 +78,7 @@ class VigiaApiTest {
             vigiaApi(
                 ApiDependencies(
                     editor = editor,
+                    secrets = secrets,
                     tokenMatches = { it == token },
                     isAllowed = { allowed },
                     appVersion = "1.2.3",
@@ -209,6 +227,49 @@ class VigiaApiTest {
 
         assertEquals(HttpStatusCode.NotFound, response.status)
         assertTrue(response.bodyAsText().contains("\"code\":\"not_found\""))
+    }
+
+    @Test
+    fun `secrets are write-only and validated`() = testApplication {
+        setUp()
+        val auth = HttpHeaders.Authorization to "Bearer $token"
+
+        val stored = client.put("$API_PREFIX/secrets/github") {
+            header(auth.first, auth.second)
+            setBody("ghp_example\n")
+        }
+        assertEquals(HttpStatusCode.NoContent, stored.status)
+        assertEquals("ghp_example", secrets.values["github"])
+
+        val listed = authed("$API_PREFIX/secrets")
+        assertEquals("""{"names":["github"]}""", listed.bodyAsText())
+        assertEquals(HttpStatusCode.NotFound, authed("$API_PREFIX/secrets/github").status)
+
+        val badName = client.put("$API_PREFIX/secrets/Bad%20Name") {
+            header(auth.first, auth.second)
+            setBody("x")
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, badName.status)
+
+        val empty = client.put("$API_PREFIX/secrets/empty") {
+            header(auth.first, auth.second)
+            setBody("  ")
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, empty.status)
+
+        assertEquals(
+            HttpStatusCode.NoContent,
+            client.delete("$API_PREFIX/secrets/github") {
+                header(auth.first, auth.second)
+            }.status
+        )
+        assertEquals(
+            HttpStatusCode.NotFound,
+            client.delete("$API_PREFIX/secrets/github") {
+                header(auth.first, auth.second)
+            }.status
+        )
+        assertEquals(HttpStatusCode.Unauthorized, client.get("$API_PREFIX/secrets").status)
     }
 
     /** Plain JSON serializer for the test DataStore (the production one is internal to core:data). */

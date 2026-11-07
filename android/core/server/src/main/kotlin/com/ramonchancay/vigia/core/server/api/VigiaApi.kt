@@ -3,8 +3,10 @@ package com.ramonchancay.vigia.core.server.api
 import com.ramonchancay.vigia.core.data.config.ConfigVersion
 import com.ramonchancay.vigia.core.data.config.ConfigWriteResult
 import com.ramonchancay.vigia.core.data.config.PanelConfigEditor
+import com.ramonchancay.vigia.core.data.secrets.SecretStore
 import com.ramonchancay.vigia.core.model.PanelConfig
 import com.ramonchancay.vigia.core.model.PanelConfigParser
+import com.ramonchancay.vigia.core.model.WidgetParams
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -23,6 +25,7 @@ import io.ktor.server.request.receiveChannel
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
@@ -39,6 +42,7 @@ import timber.log.Timber
 /** Everything the API needs, so it can run in the real server and in tests alike. */
 class ApiDependencies(
     val editor: PanelConfigEditor,
+    val secrets: SecretStore,
     val tokenMatches: suspend (String) -> Boolean,
     /** Whether a remote IP literal may call the API; see [IpAllowlist]. */
     val isAllowed: (String) -> Boolean,
@@ -92,6 +96,7 @@ fun Application.vigiaApi(deps: ApiDependencies) {
                     call.respond(HealthBody(status = "ok", version = deps.appVersion, uptimeSec = deps.uptimeSeconds()))
                 }
                 configRoutes(deps.editor, deps.tokenMatches)
+                secretRoutes(deps.secrets, deps.tokenMatches)
             }
         }
     }
@@ -126,6 +131,56 @@ private fun Route.configRoutes(editor: PanelConfigEditor, tokenMatches: suspend 
             )
         }
     }
+}
+
+/** Write-only: names can be listed, values are never returned. */
+private fun Route.secretRoutes(secrets: SecretStore, tokenMatches: suspend (String) -> Boolean) {
+    route("/secrets") {
+        install(bearerAuthPlugin(tokenMatches))
+        get { call.respond(SecretNamesBody(secrets.names())) }
+        put("/{name}") {
+            val name = call.secretName() ?: return@put
+            val value = call.receiveLimitedText().trim()
+            when {
+                value.isEmpty() -> call.respondError(
+                    HttpStatusCode.UnprocessableEntity,
+                    "invalid_format",
+                    "Secret value is empty"
+                )
+
+                value.length > SecretStore.MAX_VALUE_LENGTH -> call.respondError(
+                    HttpStatusCode.UnprocessableEntity,
+                    "out_of_range",
+                    "Secret longer than ${SecretStore.MAX_VALUE_LENGTH} characters"
+                )
+
+                else -> {
+                    secrets.put(name, value)
+                    call.respond(HttpStatusCode.NoContent)
+                }
+            }
+        }
+        delete("/{name}") {
+            val name = call.secretName() ?: return@delete
+            if (secrets.delete(name)) {
+                call.respond(HttpStatusCode.NoContent)
+            } else {
+                call.respondError(HttpStatusCode.NotFound, "not_found", "No secret named '$name'")
+            }
+        }
+    }
+}
+
+/** The `{name}` path parameter when valid; otherwise responds 422 and returns null. */
+private suspend fun ApplicationCall.secretName(): String? {
+    val name = parameters["name"].orEmpty()
+    if (WidgetParams.SECRET_NAME.matches(name)) return name
+    respondError(
+        HttpStatusCode.UnprocessableEntity,
+        "invalid_format",
+        "Secret names are 1-64 chars of a-z, 0-9, '-' or '_'"
+    )
+    return null
 }
 
 private val VERSION_LIST_SERIALIZER = ListSerializer(ConfigVersion.serializer())

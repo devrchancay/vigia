@@ -6,23 +6,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import com.ramonchancay.vigia.core.designsystem.component.PanelTile
 import com.ramonchancay.vigia.core.model.WidgetConfig
-import com.ramonchancay.vigia.feature.panel.R
-import kotlinx.serialization.json.JsonPrimitive
+import com.ramonchancay.vigia.core.model.WidgetParams
 
 /** Short static text from `params.text`, for reminders. */
 @Composable
 internal fun NoteWidget(widget: WidgetConfig, modifier: Modifier = Modifier) {
-    val text = remember(widget.params) { (widget.params["text"] as? JsonPrimitive)?.takeIf { it.isString }?.content }
+    val params = remember(widget.params) { WidgetParams.note(widget) }
+    val text = params.value?.text
     if (text == null) {
-        ErrorTile(
-            title = widget.title ?: widget.id,
-            message = stringResource(R.string.widget_missing_param, "text"),
-            modifier = modifier
-        )
+        InvalidParamsTile(widget, params.errors, modifier)
         return
     }
     PanelTile(modifier = modifier.fillMaxSize(), title = widget.title) {

@@ -13,6 +13,12 @@ import com.ramonchancay.vigia.core.data.config.DefaultConfigSource
 import com.ramonchancay.vigia.core.data.config.PanelConfigEditor
 import com.ramonchancay.vigia.core.data.config.PanelConfigRepository
 import com.ramonchancay.vigia.core.data.config.StoredPanelConfigRepository
+import com.ramonchancay.vigia.core.data.secrets.EncryptedSecretStore
+import com.ramonchancay.vigia.core.data.secrets.KeystoreSecretCipher
+import com.ramonchancay.vigia.core.data.secrets.SecretArchive
+import com.ramonchancay.vigia.core.data.secrets.SecretArchiveSerializer
+import com.ramonchancay.vigia.core.data.secrets.SecretCipher
+import com.ramonchancay.vigia.core.data.secrets.SecretStore
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -37,6 +43,12 @@ internal interface DataModule {
     @Binds
     fun bindsDefaultConfigSource(impl: BundledDefaultConfigSource): DefaultConfigSource
 
+    @Binds
+    fun bindsSecretStore(impl: EncryptedSecretStore): SecretStore
+
+    @Binds
+    fun bindsSecretCipher(impl: KeystoreSecretCipher): SecretCipher
+
     companion object {
         @Provides
         @Singleton
@@ -49,6 +61,19 @@ internal interface DataModule {
             corruptionHandler = ReplaceFileCorruptionHandler { ConfigArchive() },
             scope = CoroutineScope(ioDispatcher + SupervisorJob()),
             produceFile = { File(context.filesDir, "datastore/panel_config.json") }
+        )
+
+        @Provides
+        @Singleton
+        fun providesSecretArchiveStore(
+            @ApplicationContext context: Context,
+            @Dispatcher(VigiaDispatchers.IO) ioDispatcher: CoroutineDispatcher
+        ): DataStore<SecretArchive> = DataStoreFactory.create(
+            serializer = SecretArchiveSerializer,
+            // Unreadable secrets are dropped; sources then report the missing secret and the owner sets it again.
+            corruptionHandler = ReplaceFileCorruptionHandler { SecretArchive() },
+            scope = CoroutineScope(ioDispatcher + SupervisorJob()),
+            produceFile = { File(context.filesDir, "datastore/secrets.json") }
         )
     }
 }
