@@ -2,7 +2,7 @@
 
 Vigía: an open-source Android app that turns an old phone into an always-on, remotely configurable status panel (uptime, CI, Claude Code agents, leads). It embeds its own HTTP server and is controlled from a CLI/MCP server.
 
-**Read first:** `docs/CONTEXT.md` (why) and `docs/SPEC.md` (what). Status: M0 (scaffold), M1 (renderer), M2 (embedded server, config API, setup screen) and M3 (uptime and GitHub Actions sources, secrets, `/status`) are merged (`android/`, see `android/README.md`); next is milestone M4 (events, `agents` and `feed` widgets, Claude Code hooks) in the spec.
+**Read first:** `docs/CONTEXT.md` (why) and `docs/SPEC.md` (what). Status: M0 (scaffold), M1 (renderer), M2 (embedded server, config API, setup screen), M3 (uptime and GitHub Actions sources, secrets, `/status`), M4 (events, agents/feed widgets, Claude Code hook; plus world clock, weather and X followers widgets) and M5 (`packages/vigia` CLI + MCP server, `/screenshot`, `/widgets/types`) are merged; next is milestone M6 (kiosk) in the spec.
 
 ## Working agreement
 - The owner is Ramon (Spanish speaker). Talk to him in Spanish, concise and direct. Code, comments, commits, docs and identifiers in English. User-facing strings: English default + `values-es`.
@@ -31,9 +31,9 @@ cd android && ./gradlew build          # ktlint + lint + unit tests + debug/rele
 cd android && ./gradlew ktlintFormat
 cd android && ./gradlew installDebug
 cd android && ./gradlew bundleRelease  # AAB, signed only if keystore.properties exists
+cd packages/vigia && npm ci && npm test && npm run build
 ```
 Later milestones (not available yet):
 ```
 adb shell dpm set-device-owner com.ramonchancay.vigia/.kiosk.VigiaDeviceAdminReceiver   # M6
-cd packages/vigia && npm test                                                            # M5
 ```
