@@ -55,3 +55,23 @@ jobs:
           name: app-release-aab
           path: android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
+
+  cli:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: packages/vigia
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: packages/vigia/package-lock.json
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build

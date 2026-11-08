@@ -170,6 +170,8 @@ vigia widget rm <id>
 vigia event send --source radar --title "New lead" --level info
 vigia screenshot -o panel.png
 vigia cmd brightness 0.3
+vigia secret set <name>            # value from stdin
+vigia types
 vigia mcp                          # stdio MCP server
 ```
 

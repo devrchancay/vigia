@@ -1,0 +1,35 @@
+{
+  "name": "vigia",
+  "version": "0.1.0",
+  "description": "CLI and MCP server to control a Vigía panel (an old Android phone turned into a status display)",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "vigia": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devrchancay/vigia.git",
+    "directory": "packages/vigia"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
+  }
+}
