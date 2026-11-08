@@ -3,8 +3,11 @@ package com.ramonchancay.vigia.core.server.api
 import androidx.datastore.core.DataStoreFactory
 import com.ramonchancay.vigia.core.data.config.ConfigArchive
 import com.ramonchancay.vigia.core.data.config.StoredPanelConfigRepository
+import com.ramonchancay.vigia.core.data.events.EventRepository
 import com.ramonchancay.vigia.core.data.secrets.SecretStore
 import com.ramonchancay.vigia.core.model.PanelConfig
+import com.ramonchancay.vigia.core.model.PanelEvent
+import com.ramonchancay.vigia.core.model.StoredEvent
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -48,6 +51,37 @@ class VigiaApiTest {
     private val storeScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val token = "test-token"
 
+    /** In-memory events with a fixed receive time. */
+    private val events = object : EventRepository {
+        val stored = mutableListOf<StoredEvent>()
+        override val events = kotlinx.coroutines.flow.flowOf(emptyList<StoredEvent>())
+
+        override suspend fun push(events: List<PanelEvent>) = events.map { e ->
+            StoredEvent(
+                id = "${e.source}|${e.key}",
+                source = e.source,
+                key = e.key,
+                kind = e.kind,
+                title = e.title,
+                receivedAtMillis = 1,
+                expiresAtMillis = 2
+            )
+        }.also { new ->
+            stored.removeAll { old -> new.any { it.id == old.id } }
+            stored += new
+        }
+
+        override suspend fun active() = stored.toList()
+
+        override suspend fun delete(source: String, key: String?): Int {
+            val before = stored.size
+            stored.removeAll { it.source == source && (key == null || it.key == key) }
+            return before - stored.size
+        }
+
+        override suspend fun deleteExpired() = 0
+    }
+
     /** In-memory secrets: the API layer is what is under test here. */
     private val secrets = object : SecretStore {
         val values = mutableMapOf<String, String>()
@@ -81,6 +115,7 @@ class VigiaApiTest {
                 ApiDependencies(
                     editor = editor,
                     secrets = secrets,
+                    events = events,
                     statusSnapshot = { buildJsonObject { put("widgets", buildJsonObject {}) } },
                     tokenMatches = { it == token },
                     isAllowed = { allowed },
@@ -230,6 +265,54 @@ class VigiaApiTest {
 
         assertEquals(HttpStatusCode.NotFound, response.status)
         assertTrue(response.bodyAsText().contains("\"code\":\"not_found\""))
+    }
+
+    @Test
+    fun `events accept one object or a batch and validate everything first`() = testApplication {
+        setUp()
+        val auth = HttpHeaders.Authorization to "Bearer $token"
+
+        val single = client.post("$API_PREFIX/events") {
+            header(auth.first, auth.second)
+            setBody("""{"source":"claude-code","key":"s1","kind":"working","title":"vigia: working"}""")
+        }
+        assertEquals(HttpStatusCode.Accepted, single.status)
+        assertEquals("""{"accepted":1}""", single.bodyAsText())
+
+        val invalidBatch = client.post("$API_PREFIX/events") {
+            header(auth.first, auth.second)
+            setBody("""[{"source":"radar","title":"ok"},{"source":"Radar!","title":""}]""")
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, invalidBatch.status)
+        assertEquals(
+            "events[1].source",
+            Json.parseToJsonElement(
+                invalidBatch.bodyAsText()
+            ).jsonObject["error"]!!.jsonObject["path"]!!.jsonPrimitive.content
+        )
+        assertEquals(1, events.stored.size)
+
+        val unknownKey = client.post("$API_PREFIX/events") {
+            header(auth.first, auth.second)
+            setBody("""{"source":"radar","title":"x","colour":"red"}""")
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, unknownKey.status)
+
+        val listed = authed("$API_PREFIX/events?source=claude-code")
+        assertTrue(listed.bodyAsText().contains("\"kind\":\"working\""))
+        assertEquals(
+            HttpStatusCode.NoContent,
+            client.delete("$API_PREFIX/events/claude-code/s1") {
+                header(auth.first, auth.second)
+            }.status
+        )
+        assertEquals(
+            HttpStatusCode.NotFound,
+            client.delete("$API_PREFIX/events/claude-code") {
+                header(auth.first, auth.second)
+            }.status
+        )
+        assertEquals(HttpStatusCode.Unauthorized, client.post("$API_PREFIX/events") { setBody("{}") }.status)
     }
 
     @Test

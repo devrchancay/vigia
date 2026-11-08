@@ -7,6 +7,7 @@ import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.room.Room
 import com.ramonchancay.vigia.core.common.dispatchers.Dispatcher
 import com.ramonchancay.vigia.core.common.dispatchers.VigiaDispatchers
+import com.ramonchancay.vigia.core.common.task.AlwaysOnTask
 import com.ramonchancay.vigia.core.data.config.BundledDefaultConfigSource
 import com.ramonchancay.vigia.core.data.config.ConfigArchive
 import com.ramonchancay.vigia.core.data.config.ConfigArchiveSerializer
@@ -14,6 +15,10 @@ import com.ramonchancay.vigia.core.data.config.DefaultConfigSource
 import com.ramonchancay.vigia.core.data.config.PanelConfigEditor
 import com.ramonchancay.vigia.core.data.config.PanelConfigRepository
 import com.ramonchancay.vigia.core.data.config.StoredPanelConfigRepository
+import com.ramonchancay.vigia.core.data.events.EventDao
+import com.ramonchancay.vigia.core.data.events.EventPruner
+import com.ramonchancay.vigia.core.data.events.EventRepository
+import com.ramonchancay.vigia.core.data.events.RoomEventRepository
 import com.ramonchancay.vigia.core.data.secrets.EncryptedSecretStore
 import com.ramonchancay.vigia.core.data.secrets.KeystoreSecretCipher
 import com.ramonchancay.vigia.core.data.secrets.SecretArchive
@@ -30,6 +35,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.IntoSet
 import java.io.File
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -57,18 +63,28 @@ internal interface DataModule {
     @Binds
     fun bindsStatusRepository(impl: RoomStatusRepository): StatusRepository
 
+    @Binds
+    fun bindsEventRepository(impl: RoomEventRepository): EventRepository
+
+    @Binds
+    @IntoSet
+    fun bindsEventPruner(impl: EventPruner): AlwaysOnTask
+
     companion object {
         @Provides
         @Singleton
         fun providesStatusDatabase(@ApplicationContext context: Context): StatusDatabase =
             Room.databaseBuilder(context, StatusDatabase::class.java, "status.db")
-                // Only the latest state is stored and sources refill it within a minute, so a schema change
+                // Source states refill within a minute and events are short-lived (TTL), so a schema change
                 // can start from empty instead of migrating.
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
 
         @Provides
         fun providesStatusDao(database: StatusDatabase): StatusDao = database.statusDao()
+
+        @Provides
+        fun providesEventDao(database: StatusDatabase): EventDao = database.eventDao()
 
         @Provides
         @Singleton

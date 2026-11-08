@@ -19,6 +19,9 @@ data class ValidationBody(val valid: Boolean)
 @Serializable
 data class SecretNamesBody(val names: List<String>)
 
+@Serializable
+data class AcceptedBody(val accepted: Int)
+
 internal fun ConfigError.toApiError() = ApiError(code = code.name.toSnakeCase(), message = message, path = path)
 
 internal fun List<ConfigError>.toBody() = ApiErrorBody(error = first().toApiError(), errors = map { it.toApiError() })
