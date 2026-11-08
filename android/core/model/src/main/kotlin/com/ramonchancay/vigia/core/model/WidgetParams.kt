@@ -16,6 +16,7 @@ object WidgetTypes {
     const val FEED = "feed"
     const val WORLD_CLOCK = "world_clock"
     const val WEATHER = "weather"
+    const val X_FOLLOWERS = "x_followers"
 
     val DEVICE_ROWS = listOf("battery", "batteryTemp", "memory", "wifi")
 }
@@ -65,6 +66,13 @@ data class WorldClockParams(val zones: List<WorldZone>)
 @Serializable
 data class WeatherParams(val name: String, val latitude: Double, val longitude: Double, val intervalSec: Int = 900)
 
+/**
+ * Follower count of an X account through the official API v2. [tokenSecret] names a stored secret holding an
+ * app bearer token. X bills reads per call, so the interval defaults to 6 h.
+ */
+@Serializable
+data class XFollowersParams(val username: String, val tokenSecret: String, val intervalSec: Int = 21_600)
+
 /** Decoding and checking of `params` per widget type. Errors carry paths relative to the widget (`params.x`). */
 object WidgetParams {
     private val json = Json { ignoreUnknownKeys = false }
@@ -79,6 +87,8 @@ object WidgetParams {
     const val MAX_ROWS = 20
     const val MAX_WORLD_ZONES = 6
     val WEATHER_INTERVAL_RANGE = 600..3_600
+    val X_INTERVAL_RANGE = 3_600..86_400
+    private val X_USERNAME = Regex("[A-Za-z0-9_]{1,15}")
 
     fun note(widget: WidgetConfig): Decoded<NoteParams> = decode(widget, NoteParams.serializer()) { params, errors ->
         if (params.text.isBlank()) errors += error(ConfigError.Code.InvalidFormat, "text", "Must not be blank")
@@ -248,6 +258,28 @@ object WidgetParams {
         }
     }
 
+    fun xFollowers(widget: WidgetConfig): Decoded<XFollowersParams> = decode(widget, XFollowersParams.serializer()) {
+            params,
+            errors
+        ->
+        if (!X_USERNAME.matches(params.username)) {
+            errors +=
+                error(ConfigError.Code.InvalidFormat, "username", "1-15 chars of A-Z, a-z, 0-9 or '_', without @")
+        }
+        if (!SECRET_NAME.matches(params.tokenSecret)) {
+            errors +=
+                error(ConfigError.Code.InvalidFormat, "tokenSecret", "Not a valid secret name")
+        }
+        if (params.intervalSec !in X_INTERVAL_RANGE) {
+            errors +=
+                error(
+                    ConfigError.Code.OutOfRange,
+                    "intervalSec",
+                    "Between ${X_INTERVAL_RANGE.first} and ${X_INTERVAL_RANGE.last}"
+                )
+        }
+    }
+
     /** Params errors for a known [WidgetConfig.type]; empty for valid params and for unknown types. */
     fun validate(widget: WidgetConfig): List<ConfigError> = when (widget.type) {
         WidgetTypes.NOTE -> note(widget).errors
@@ -258,6 +290,7 @@ object WidgetParams {
         WidgetTypes.FEED -> feed(widget).errors
         WidgetTypes.WORLD_CLOCK -> worldClock(widget).errors
         WidgetTypes.WEATHER -> weather(widget).errors
+        WidgetTypes.X_FOLLOWERS -> xFollowers(widget).errors
         else -> emptyList()
     }
 

@@ -1,5 +1,6 @@
 package com.ramonchancay.vigia.feature.sources
 
+import com.ramonchancay.vigia.core.model.MetricStatus
 import com.ramonchancay.vigia.core.model.PanelConfig
 import com.ramonchancay.vigia.core.model.WeatherStatus
 import com.ramonchancay.vigia.core.model.WidgetParams
@@ -7,6 +8,8 @@ import com.ramonchancay.vigia.core.model.WidgetTypes
 import com.ramonchancay.vigia.core.model.WorkflowRunStatus
 import kotlin.math.min
 import kotlin.math.roundToLong
+
+data class XFollowersJob(val key: String, val username: String, val tokenSecret: String, val intervalSec: Int)
 
 data class WeatherJob(val key: String, val latitude: Double, val longitude: Double, val intervalSec: Int)
 
@@ -28,13 +31,15 @@ data class GithubJob(
 data class SourcePlan(
     val uptime: Map<String, UptimeJob>,
     val github: Map<String, GithubJob>,
-    val weather: Map<String, WeatherJob> = emptyMap()
+    val weather: Map<String, WeatherJob> = emptyMap(),
+    val xFollowers: Map<String, XFollowersJob> = emptyMap()
 ) {
     companion object {
         fun from(config: PanelConfig): SourcePlan {
             val uptime = linkedMapOf<String, UptimeJob>()
             val github = linkedMapOf<String, GithubJob>()
             val weather = linkedMapOf<String, WeatherJob>()
+            val xFollowers = linkedMapOf<String, XFollowersJob>()
             for (widget in config.widgets) {
                 when (widget.type) {
                     WidgetTypes.UPTIME -> WidgetParams.uptime(widget).value?.let { params ->
@@ -46,6 +51,17 @@ data class SourcePlan(
                                 intervalSec = min(previous?.intervalSec ?: Int.MAX_VALUE, params.intervalSec)
                             )
                         }
+                    }
+
+                    WidgetTypes.X_FOLLOWERS -> WidgetParams.xFollowers(widget).value?.let { params ->
+                        val key = MetricStatus.xFollowersKey(params.username)
+                        val previous = xFollowers[key]
+                        xFollowers[key] = XFollowersJob(
+                            key = key,
+                            username = params.username,
+                            tokenSecret = previous?.tokenSecret ?: params.tokenSecret,
+                            intervalSec = min(previous?.intervalSec ?: Int.MAX_VALUE, params.intervalSec)
+                        )
                     }
 
                     WidgetTypes.WEATHER -> WidgetParams.weather(widget).value?.let { params ->
@@ -76,7 +92,7 @@ data class SourcePlan(
                     }
                 }
             }
-            return SourcePlan(uptime, github, weather)
+            return SourcePlan(uptime, github, weather, xFollowers)
         }
 
         /**

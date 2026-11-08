@@ -34,4 +34,6 @@
     <string name="sky_storm">Thunderstorm</string>
     <string name="weather_feels">feels %1$s</string>
     <string name="weather_rain">rain %1$d%%</string>
+    <string name="metric_change_day">%1$s in 24 h</string>
+    <string name="metric_no_change_yet">change after a day of readings</string>
 </resources>

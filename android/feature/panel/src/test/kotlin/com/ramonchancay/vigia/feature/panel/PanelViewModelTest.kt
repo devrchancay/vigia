@@ -34,6 +34,7 @@ class PanelViewModelTest {
         every { uptime } returns emptyFlow()
         every { workflows } returns emptyFlow()
         every { weather } returns emptyFlow()
+        every { metrics } returns emptyFlow()
     }
 
     @Test

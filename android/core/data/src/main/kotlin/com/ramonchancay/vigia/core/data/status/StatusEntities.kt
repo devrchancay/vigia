@@ -2,6 +2,7 @@ package com.ramonchancay.vigia.core.data.status
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.ramonchancay.vigia.core.model.MetricStatus
 import com.ramonchancay.vigia.core.model.UptimeStatus
 import com.ramonchancay.vigia.core.model.WeatherStatus
 import com.ramonchancay.vigia.core.model.WorkflowRunStatus
@@ -111,3 +112,24 @@ internal data class WeatherStateEntity(
         )
     }
 }
+
+/** Latest value and change of a tracked number, recomputed from [MetricPointEntity] on each reading. */
+@Entity(tableName = "metric_state")
+internal data class MetricStateEntity(
+    @PrimaryKey val key: String,
+    val value: Long?,
+    val changeLastDay: Long?,
+    val error: String?,
+    val checkedAtMillis: Long
+) {
+    fun toModel() = MetricStatus(key, value, changeLastDay, error, checkedAtMillis)
+}
+
+/** Readings kept for 8 days, enough to compare with a day ago at a few points per day. */
+@Entity(tableName = "metric_points", indices = [androidx.room.Index("key")])
+internal data class MetricPointEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val key: String,
+    val value: Long,
+    val atMillis: Long
+)

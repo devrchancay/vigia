@@ -39,4 +39,29 @@ internal interface StatusDao {
 
     @Query("DELETE FROM weather_state WHERE `key` NOT IN (:keys)")
     suspend fun retainWeather(keys: List<String>)
+
+    @Query("SELECT * FROM metric_state")
+    fun observeMetrics(): Flow<List<MetricStateEntity>>
+
+    @Query("SELECT * FROM metric_state WHERE `key` = :key")
+    suspend fun metric(key: String): MetricStateEntity?
+
+    @Upsert
+    suspend fun upsertMetric(entity: MetricStateEntity)
+
+    @androidx.room.Insert
+    suspend fun insertPoint(point: MetricPointEntity)
+
+    /** The newest reading at or before [atMillis], or null. */
+    @Query("SELECT * FROM metric_points WHERE `key` = :key AND atMillis <= :atMillis ORDER BY atMillis DESC LIMIT 1")
+    suspend fun pointAtOrBefore(key: String, atMillis: Long): MetricPointEntity?
+
+    @Query("DELETE FROM metric_points WHERE atMillis < :beforeMillis")
+    suspend fun deletePointsBefore(beforeMillis: Long)
+
+    @Query("DELETE FROM metric_state WHERE `key` NOT IN (:keys)")
+    suspend fun retainMetricStates(keys: List<String>)
+
+    @Query("DELETE FROM metric_points WHERE `key` NOT IN (:keys)")
+    suspend fun retainMetricPoints(keys: List<String>)
 }

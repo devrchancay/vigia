@@ -59,4 +59,20 @@ class RoomStatusRepositoryTest {
         assertEquals(setOf("https://a.example"), repository.uptime.first().keys)
         assertTrue(repository.workflows.first().isEmpty())
     }
+
+    @Test
+    fun `metric change compares with the reading closest to a day earlier`() = runTest {
+        val hour = 3_600_000L
+        repository.recordMetric("x:me", 100, atMillis = 0)
+        assertEquals(null, repository.metrics.first().getValue("x:me").changeLastDay)
+
+        repository.recordMetric("x:me", 110, atMillis = 6 * hour)
+        repository.recordMetric("x:me", 125, atMillis = 25 * hour)
+        assertEquals(25L, repository.metrics.first().getValue("x:me").changeLastDay)
+
+        repository.recordMetricError("x:me", "HTTP 402", atMillis = 31 * hour)
+        val failed = repository.metrics.first().getValue("x:me")
+        assertEquals(125L, failed.value)
+        assertEquals("HTTP 402", failed.error)
+    }
 }

@@ -34,4 +34,6 @@
     <string name="sky_storm">Tormenta</string>
     <string name="weather_feels">sensación %1$s</string>
     <string name="weather_rain">lluvia %1$d%%</string>
+    <string name="metric_change_day">%1$s en 24 h</string>
+    <string name="metric_no_change_yet">el cambio aparece tras un día de lecturas</string>
 </resources>
