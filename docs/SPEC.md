@@ -127,7 +127,7 @@ Every accepted config change is stored with a timestamp and author (from a heade
 | `POST /widgets` / `PATCH /widgets/{id}` / `DELETE /widgets/{id}` | widget-level edits |
 | `POST /widgets/{id}/data` | push data to `metric`/`note` widgets |
 | `GET /widgets/types` | widget catalog with param schemas (lets agents discover what is possible) |
-| `POST /events` | push an event (see below) |
+| `POST /events` / `GET /events` / `DELETE /events/{source}[/{key}]` | push, list and remove events (see below) |
 | `GET /status` | current data of every widget (what the screen shows, as JSON) |
 | `GET /screenshot` | PNG of the current panel (PixelCopy) so agents can verify changes |
 | `POST /commands` | `reload`, `brightness`, `screen_on`, `screen_off`, `toast`, `identify` (flash the screen) |
@@ -143,10 +143,13 @@ Every accepted config change is stored with a timestamp and author (from a heade
   "body": "optional detail",
   "level": "warn",
   "ttlSec": 3600,
-  "url": "optional link"
+  "url": "optional link",
+  "at": "2026-11-07T15:00:00Z"
 }
 ```
 `key` makes events idempotent: a new event with the same `source`+`key` replaces the previous one (that is how an agent row moves from working → waiting → done).
+
+Rules (implemented in `core/model`, `PanelEvent`): `source` 1–64 chars of `a-z 0-9 - _`; `title` 1–200 chars; `key` ≤ 128; `kind` `a-z 0-9 _` ≤ 40; `body` ≤ 1000; `level` `info|ok|warn|error` (default `info`); `ttlSec` 10 s – 7 days (default 1 day); `url` http(s) ≤ 500; `at` optional ISO-8601 instant for things that happen at a time (meetings, deadlines). `POST /events` takes one object or an array of up to 50, validates all before storing any (422 with `events[i].field` paths) and answers 202 `{"accepted": n}`. Each source keeps its newest 100 events; expired ones are pruned every 5 minutes. `GET /events?source=` lists active events; `DELETE /events/{source}` and `DELETE /events/{source}/{key}` remove them.
 
 ### Battery actions (optional)
 Config can declare `actions.battery`: `{ "above": 80, "webhook": "smart-plug-off" }`, `{ "below": 40, "webhook": "smart-plug-on" }`, webhook URLs referenced as secrets. Generic enough for any smart plug with an HTTP API.

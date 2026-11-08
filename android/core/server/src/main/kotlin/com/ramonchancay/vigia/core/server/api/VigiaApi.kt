@@ -3,9 +3,13 @@ package com.ramonchancay.vigia.core.server.api
 import com.ramonchancay.vigia.core.data.config.ConfigVersion
 import com.ramonchancay.vigia.core.data.config.ConfigWriteResult
 import com.ramonchancay.vigia.core.data.config.PanelConfigEditor
+import com.ramonchancay.vigia.core.data.events.EventRepository
 import com.ramonchancay.vigia.core.data.secrets.SecretStore
+import com.ramonchancay.vigia.core.model.ConfigError
 import com.ramonchancay.vigia.core.model.PanelConfig
 import com.ramonchancay.vigia.core.model.PanelConfigParser
+import com.ramonchancay.vigia.core.model.PanelEvent
+import com.ramonchancay.vigia.core.model.StoredEvent
 import com.ramonchancay.vigia.core.model.WidgetParams
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -35,8 +39,10 @@ import io.ktor.server.routing.routing
 import io.ktor.utils.io.readBuffer
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.io.readByteArray
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import timber.log.Timber
 
@@ -44,6 +50,7 @@ import timber.log.Timber
 class ApiDependencies(
     val editor: PanelConfigEditor,
     val secrets: SecretStore,
+    val events: EventRepository,
     /** Current content of every widget for `GET /status`. */
     val statusSnapshot: suspend () -> JsonObject,
     val tokenMatches: suspend (String) -> Boolean,
@@ -100,6 +107,7 @@ fun Application.vigiaApi(deps: ApiDependencies) {
                 }
                 configRoutes(deps.editor, deps.tokenMatches)
                 secretRoutes(deps.secrets, deps.tokenMatches)
+                eventRoutes(deps.events, deps.tokenMatches)
                 route("/status") {
                     install(bearerAuthPlugin(deps.tokenMatches))
                     get { call.respondText(deps.statusSnapshot().toString(), ContentType.Application.Json) }
@@ -139,6 +147,72 @@ private fun Route.configRoutes(editor: PanelConfigEditor, tokenMatches: suspend 
         }
     }
 }
+
+private val eventJson = Json { ignoreUnknownKeys = false }
+
+/** Pushed events: one object or an array of up to [PanelEvent.MAX_BATCH]; all are validated before any is stored. */
+private fun Route.eventRoutes(events: EventRepository, tokenMatches: suspend (String) -> Boolean) {
+    route("/events") {
+        install(bearerAuthPlugin(tokenMatches))
+        post {
+            val text = call.receiveLimitedText()
+            val element = try {
+                eventJson.parseToJsonElement(text)
+            } catch (e: SerializationException) {
+                return@post call.respondError(HttpStatusCode.UnprocessableEntity, "malformed_json", "Body is not JSON")
+            }
+            val isBatch = element is JsonArray
+            val elements = (element as? JsonArray)?.toList() ?: listOf(element)
+            if (elements.isEmpty() || elements.size > PanelEvent.MAX_BATCH) {
+                return@post call.respondError(
+                    HttpStatusCode.UnprocessableEntity,
+                    "out_of_range",
+                    "Send 1 to ${PanelEvent.MAX_BATCH} events"
+                )
+            }
+            val errors = mutableListOf<ConfigError>()
+            val parsed = elements.mapIndexedNotNull { index, item ->
+                val prefix = if (isBatch) "events[$index]" else ""
+                try {
+                    eventJson.decodeFromJsonElement(PanelEvent.serializer(), item).also {
+                        errors +=
+                            PanelEvent.validate(it, prefix)
+                    }
+                } catch (e: SerializationException) {
+                    errors +=
+                        ConfigError(ConfigError.Code.MalformedJson, prefix, e.message.orEmpty().lineSequence().first())
+                    null
+                } catch (e: IllegalArgumentException) {
+                    errors +=
+                        ConfigError(ConfigError.Code.MalformedJson, prefix, e.message.orEmpty().lineSequence().first())
+                    null
+                }
+            }
+            if (errors.isNotEmpty()) return@post call.respond(HttpStatusCode.UnprocessableEntity, errors.toBody())
+            events.push(parsed)
+            call.respond(HttpStatusCode.Accepted, AcceptedBody(accepted = parsed.size))
+        }
+        get {
+            val source = call.request.queryParameters["source"]
+            val active = events.active().filter { source == null || it.source == source }
+            call.respondText(responseJson.encodeToString(EVENT_LIST_SERIALIZER, active), ContentType.Application.Json)
+        }
+        delete("/{source}") { call.respondDeleted(events.delete(call.parameters["source"].orEmpty(), key = null)) }
+        delete("/{source}/{key}") {
+            call.respondDeleted(events.delete(call.parameters["source"].orEmpty(), call.parameters["key"].orEmpty()))
+        }
+    }
+}
+
+private suspend fun ApplicationCall.respondDeleted(count: Int) = if (count >
+    0
+) {
+    respond(HttpStatusCode.NoContent)
+} else {
+    respondError(HttpStatusCode.NotFound, "not_found", "No matching events")
+}
+
+private val EVENT_LIST_SERIALIZER = ListSerializer(StoredEvent.serializer())
 
 /** Write-only: names can be listed, values are never returned. */
 private fun Route.secretRoutes(secrets: SecretStore, tokenMatches: suspend (String) -> Boolean) {

@@ -18,6 +18,7 @@ dependencies {
     api(projects.core.model)
     implementation(projects.core.common)
     implementation(libs.androidx.datastore)
+    implementation(libs.timber)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
