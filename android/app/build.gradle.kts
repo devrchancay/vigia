@@ -54,6 +54,7 @@ android {
 dependencies {
     implementation(projects.core.common)
     implementation(projects.core.designsystem)
+    implementation(projects.core.device)
     implementation(projects.core.server)
     implementation(projects.feature.panel)
     implementation(projects.feature.setup)

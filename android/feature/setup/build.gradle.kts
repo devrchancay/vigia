@@ -8,5 +8,7 @@ android {
 
 dependencies {
     implementation(projects.core.server)
+    implementation(projects.core.data)
+    implementation(projects.core.device)
     implementation(libs.zxing.core)
 }

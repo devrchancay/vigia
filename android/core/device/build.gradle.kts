@@ -10,6 +10,7 @@ android {
 dependencies {
     implementation(projects.core.common)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.timber)
 
     testImplementation(libs.junit)
 }
