@@ -50,6 +50,7 @@ class VigiaApiTest {
 
     private val storeScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val token = "test-token"
+    private var screenshotBytes: ByteArray? = null
 
     /** In-memory events with a fixed receive time. */
     private val events = object : EventRepository {
@@ -117,6 +118,7 @@ class VigiaApiTest {
                     secrets = secrets,
                     events = events,
                     statusSnapshot = { buildJsonObject { put("widgets", buildJsonObject {}) } },
+                    screenshot = { screenshotBytes },
                     tokenMatches = { it == token },
                     isAllowed = { allowed },
                     appVersion = "1.2.3",
@@ -313,6 +315,26 @@ class VigiaApiTest {
             }.status
         )
         assertEquals(HttpStatusCode.Unauthorized, client.post("$API_PREFIX/events") { setBody("{}") }.status)
+    }
+
+    @Test
+    fun `screenshot is a png when the panel is visible and 503 otherwise`() = testApplication {
+        setUp()
+
+        assertEquals(HttpStatusCode.ServiceUnavailable, authed("$API_PREFIX/screenshot").status)
+        screenshotBytes = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47)
+        val png = authed("$API_PREFIX/screenshot")
+        assertEquals(HttpStatusCode.OK, png.status)
+        assertEquals("image/png", png.headers[HttpHeaders.ContentType])
+        assertEquals(HttpStatusCode.Unauthorized, client.get("$API_PREFIX/screenshot").status)
+    }
+
+    @Test
+    fun `widget types list the catalog`() = testApplication {
+        setUp()
+
+        val types = Json.parseToJsonElement(authed("$API_PREFIX/widgets/types").bodyAsText()).jsonArray
+        assertTrue(types.any { it.jsonObject["type"]!!.jsonPrimitive.content == "weather" })
     }
 
     @Test
