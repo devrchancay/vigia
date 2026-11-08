@@ -19,4 +19,8 @@
     <string name="device_battery_short">Bat</string>
     <string name="device_battery_temp_short">Temp</string>
     <string name="device_memory_short">Mem</string>
+    <string name="agents_title">Agentes</string>
+    <string name="agents_empty">Sin sesiones de agentes</string>
+    <string name="feed_title">Novedades</string>
+    <string name="feed_empty">Nada nuevo</string>
 </resources>

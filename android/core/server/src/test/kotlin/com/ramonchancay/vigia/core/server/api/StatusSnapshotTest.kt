@@ -6,6 +6,7 @@ import com.ramonchancay.vigia.core.device.MemoryStatus
 import com.ramonchancay.vigia.core.device.WifiStatus
 import com.ramonchancay.vigia.core.model.ConfigParseResult
 import com.ramonchancay.vigia.core.model.PanelConfigParser
+import com.ramonchancay.vigia.core.model.StoredEvent
 import com.ramonchancay.vigia.core.model.UptimeStatus
 import com.ramonchancay.vigia.core.model.WorkflowRunStatus
 import kotlinx.serialization.json.JsonNull
@@ -26,7 +27,8 @@ class StatusSnapshotTest {
               {"id":"sites","type":"uptime","pos":{"x":3,"y":0,"w":1,"h":1},"params":{"targets":[
                 {"name":"site","url":"https://example.com"},{"name":"new","url":"https://new.example.com"}]}},
               {"id":"ci","type":"github_actions","pos":{"x":4,"y":0,"w":1,"h":1},"params":{"repos":["owner/repo"],"branch":"main"}},
-              {"id":"radar","type":"feed","pos":{"x":5,"y":0,"w":1,"h":1}}
+              {"id":"radar","type":"hologram","pos":{"x":5,"y":0,"w":1,"h":1}},
+              {"id":"tickets","type":"feed","pos":{"x":6,"y":0,"w":1,"h":1},"params":{"sources":["jira"]}}
             ]}
             """.trimIndent()
         ) as ConfigParseResult.Valid
@@ -53,7 +55,17 @@ class StatusSnapshotTest {
                 MemoryStatus(1L shl 30, 2L shl 30),
                 WifiStatus(true, 4)
             ),
-            nowMillis = 0
+            nowMillis = 0,
+            events = listOf(
+                StoredEvent(id = "jira|1", source = "jira", title = "NA-1", receivedAtMillis = 0, expiresAtMillis = 10),
+                StoredEvent(
+                    id = "jira|2",
+                    source = "jira",
+                    title = "expired",
+                    receivedAtMillis = 0,
+                    expiresAtMillis = 0
+                )
+            )
         )
 
         val widgets = snapshot.getValue("widgets").jsonObject
@@ -77,5 +89,7 @@ class StatusSnapshotTest {
         val run = widgets.getValue("ci").jsonObject.getValue("repos").jsonArray[0].jsonObject.getValue("run").jsonObject
         assertEquals("success", run.getValue("conclusion").jsonPrimitive.content)
         assertEquals("unsupported type", widgets.getValue("radar").jsonObject.getValue("error").jsonPrimitive.content)
+        val tickets = widgets.getValue("tickets").jsonObject.getValue("items").jsonArray
+        assertEquals(listOf("NA-1"), tickets.map { it.jsonObject.getValue("title").jsonPrimitive.content })
     }
 }

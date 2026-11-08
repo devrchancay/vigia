@@ -12,6 +12,8 @@ object WidgetTypes {
     const val DEVICE = "device"
     const val UPTIME = "uptime"
     const val GITHUB_ACTIONS = "github_actions"
+    const val AGENTS = "agents"
+    const val FEED = "feed"
 
     val DEVICE_ROWS = listOf("battery", "batteryTemp", "memory", "wifi")
 }
@@ -42,6 +44,14 @@ data class GithubActionsParams(
     val tokenSecret: String? = null
 )
 
+/** Sessions pushed by an agent hook (Claude Code by default); one row per event key. */
+@Serializable
+data class AgentsParams(val source: String = "claude-code", val max: Int = 6)
+
+/** Newest events of [sources]; e.g. tickets pushed by a Jira script use `sources: ["jira"]`. */
+@Serializable
+data class FeedParams(val sources: List<String>, val max: Int = 5, val showBody: Boolean = false)
+
 /** Decoding and checking of `params` per widget type. Errors carry paths relative to the widget (`params.x`). */
 object WidgetParams {
     private val json = Json { ignoreUnknownKeys = false }
@@ -53,6 +63,7 @@ object WidgetParams {
     const val MAX_UPTIME_TARGETS = 20
     const val MAX_REPOS = 10
     const val MAX_NOTE_LENGTH = 500
+    const val MAX_ROWS = 20
 
     fun note(widget: WidgetConfig): Decoded<NoteParams> = decode(widget, NoteParams.serializer()) { params, errors ->
         if (params.text.isBlank()) errors += error(ConfigError.Code.InvalidFormat, "text", "Must not be blank")
@@ -140,12 +151,41 @@ object WidgetParams {
             }
         }
 
+    fun agents(widget: WidgetConfig): Decoded<AgentsParams> = decode(widget, AgentsParams.serializer()) {
+            params,
+            errors
+        ->
+        if (!SECRET_NAME.matches(params.source)) {
+            errors +=
+                error(ConfigError.Code.InvalidFormat, "source", "Not a valid source name")
+        }
+        if (params.max !in 1..MAX_ROWS) errors += error(ConfigError.Code.OutOfRange, "max", "Between 1 and $MAX_ROWS")
+    }
+
+    fun feed(widget: WidgetConfig): Decoded<FeedParams> = decode(widget, FeedParams.serializer()) { params, errors ->
+        if (params.sources.isEmpty() ||
+            params.sources.size > 10
+        ) {
+            errors +=
+                error(ConfigError.Code.OutOfRange, "sources", "Between 1 and 10 sources")
+        }
+        params.sources.forEachIndexed { i, source ->
+            if (!SECRET_NAME.matches(source)) {
+                errors +=
+                    error(ConfigError.Code.InvalidFormat, "sources[$i]", "Not a valid source name")
+            }
+        }
+        if (params.max !in 1..MAX_ROWS) errors += error(ConfigError.Code.OutOfRange, "max", "Between 1 and $MAX_ROWS")
+    }
+
     /** Params errors for a known [WidgetConfig.type]; empty for valid params and for unknown types. */
     fun validate(widget: WidgetConfig): List<ConfigError> = when (widget.type) {
         WidgetTypes.NOTE -> note(widget).errors
         WidgetTypes.DEVICE -> device(widget).errors
         WidgetTypes.UPTIME -> uptime(widget).errors
         WidgetTypes.GITHUB_ACTIONS -> githubActions(widget).errors
+        WidgetTypes.AGENTS -> agents(widget).errors
+        WidgetTypes.FEED -> feed(widget).errors
         else -> emptyList()
     }
 
