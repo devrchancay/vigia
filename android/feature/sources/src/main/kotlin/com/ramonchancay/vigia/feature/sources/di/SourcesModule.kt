@@ -4,6 +4,7 @@ import com.ramonchancay.vigia.core.common.task.AlwaysOnTask
 import com.ramonchancay.vigia.feature.sources.SourceScheduler
 import com.ramonchancay.vigia.feature.sources.github.GithubActionsClient
 import com.ramonchancay.vigia.feature.sources.weather.WeatherClient
+import com.ramonchancay.vigia.feature.sources.x.XClient
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -44,5 +45,9 @@ internal interface SourcesModule {
         @Provides
         @Named(WeatherClient.BASE_URL_NAME)
         fun providesOpenMeteoBaseUrl(): String = WeatherClient.DEFAULT_BASE_URL
+
+        @Provides
+        @Named(XClient.BASE_URL_NAME)
+        fun providesXBaseUrl(): String = XClient.DEFAULT_BASE_URL
     }
 }

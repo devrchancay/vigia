@@ -16,6 +16,7 @@ import com.ramonchancay.vigia.core.device.MemoryStatus
 import com.ramonchancay.vigia.core.device.WifiStatus
 import com.ramonchancay.vigia.core.model.ConfigParseResult
 import com.ramonchancay.vigia.core.model.EventLevel
+import com.ramonchancay.vigia.core.model.MetricStatus
 import com.ramonchancay.vigia.core.model.PanelConfig
 import com.ramonchancay.vigia.core.model.PanelConfigParser
 import com.ramonchancay.vigia.core.model.StoredEvent
@@ -27,6 +28,7 @@ import com.ramonchancay.vigia.core.model.WorkflowRunStatus
 import com.ramonchancay.vigia.feature.panel.widget.AGENT_ROW_TAG
 import com.ramonchancay.vigia.feature.panel.widget.CLOCK_TIME_TAG
 import com.ramonchancay.vigia.feature.panel.widget.DEVICE_ROW_TAG
+import com.ramonchancay.vigia.feature.panel.widget.METRIC_VALUE_TAG
 import com.ramonchancay.vigia.feature.panel.widget.WEATHER_TEMP_TAG
 import com.ramonchancay.vigia.feature.panel.widget.WidgetData
 import java.time.Instant
@@ -55,6 +57,7 @@ class PanelScreenTest {
         workflows: Map<String, WorkflowRunStatus> = emptyMap(),
         events: List<StoredEvent> = emptyList(),
         weather: Map<String, WeatherStatus> = emptyMap(),
+        metrics: Map<String, MetricStatus> = emptyMap(),
         zone: ZoneId = ZoneOffset.UTC
     ) = WidgetData(
         mutableStateOf(now),
@@ -63,6 +66,7 @@ class PanelScreenTest {
         mutableStateOf(workflows),
         mutableStateOf(events),
         mutableStateOf(weather),
+        mutableStateOf(metrics),
         zone
     )
 
@@ -103,6 +107,7 @@ class PanelScreenTest {
                 mutableStateOf(emptyMap()),
                 mutableStateOf(emptyMap()),
                 mutableStateOf(emptyList()),
+                mutableStateOf(emptyMap()),
                 mutableStateOf(emptyMap()),
                 ZoneOffset.UTC
             )
@@ -332,6 +337,26 @@ class PanelScreenTest {
         composeRule.onNodeWithTag(WEATHER_TEMP_TAG).assertTextEquals("27°")
         composeRule.onNodeWithText("Cloudy").assertExists()
         composeRule.onNodeWithText("feels 30° · ↑31° ↓23° · rain 40%").assertExists()
+    }
+
+    @Test
+    fun xFollowersShowsTheCountAndTheDailyChange() {
+        val config = (
+            PanelConfigParser.parse(
+                """
+                {"schemaVersion":1,"widgets":[{"id":"x","type":"x_followers","pos":{"x":0,"y":0,"w":4,"h":4},
+                  "params":{"username":"SomeOne","tokenSecret":"x"}}]}
+                """.trimIndent()
+            ) as ConfigParseResult.Valid
+            ).config
+        val metrics =
+            mapOf("x:someone" to MetricStatus("x:someone", value = 12_345, changeLastDay = 27, checkedAtMillis = 1))
+        val data = data(metrics = metrics)
+        composeRule.setContent { PanelScreen(uiState = PanelUiState.Ready(config), data = data, onAction = {}) }
+
+        composeRule.onNodeWithTag(METRIC_VALUE_TAG).assertTextEquals("12,345")
+        composeRule.onNodeWithText("+27 in 24 h").assertExists()
+        composeRule.onNodeWithText("X · @SOMEONE").assertExists()
     }
 
     @Test

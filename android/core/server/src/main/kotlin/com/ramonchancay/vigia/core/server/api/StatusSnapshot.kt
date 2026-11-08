@@ -5,6 +5,7 @@ import com.ramonchancay.vigia.core.data.events.EventRepository
 import com.ramonchancay.vigia.core.data.status.StatusRepository
 import com.ramonchancay.vigia.core.device.DeviceStatus
 import com.ramonchancay.vigia.core.device.DeviceStatusRepository
+import com.ramonchancay.vigia.core.model.MetricStatus
 import com.ramonchancay.vigia.core.model.PanelConfig
 import com.ramonchancay.vigia.core.model.StoredEvent
 import com.ramonchancay.vigia.core.model.UptimeStatus
@@ -40,6 +41,7 @@ class StatusSnapshot @Inject constructor(
         device = device.status().first(),
         events = events.active(),
         weather = status.weather.first(),
+        metrics = status.metrics.first(),
         nowMillis = clock.millis()
     )
 
@@ -53,7 +55,8 @@ class StatusSnapshot @Inject constructor(
             device: DeviceStatus?,
             nowMillis: Long,
             events: List<StoredEvent> = emptyList(),
-            weather: Map<String, WeatherStatus> = emptyMap()
+            weather: Map<String, WeatherStatus> = emptyMap(),
+            metrics: Map<String, MetricStatus> = emptyMap()
         ): JsonObject = buildJsonObject {
             put("generatedAt", Instant.ofEpochMilli(nowMillis).toString())
             val active = events.filter { it.expiresAtMillis > nowMillis }
@@ -61,7 +64,7 @@ class StatusSnapshot @Inject constructor(
                 "widgets",
                 buildJsonObject {
                     config.widgets.forEach {
-                        put(it.id, widget(it, uptime, workflows, device, active, weather, nowMillis))
+                        put(it.id, widget(it, uptime, workflows, device, active, weather, metrics, nowMillis))
                     }
                 }
             )
@@ -74,6 +77,7 @@ class StatusSnapshot @Inject constructor(
             device: DeviceStatus?,
             events: List<StoredEvent>,
             weather: Map<String, WeatherStatus>,
+            metrics: Map<String, MetricStatus>,
             nowMillis: Long
         ): JsonObject = buildJsonObject {
             put("type", widget.type)
@@ -178,6 +182,18 @@ class StatusSnapshot @Inject constructor(
                         }
                     }
                 )
+
+                WidgetTypes.X_FOLLOWERS -> {
+                    val metric = WidgetParams.xFollowers(widget).value?.let {
+                        metrics[MetricStatus.xFollowersKey(it.username)]
+                    }
+                    put(
+                        "followers",
+                        metric?.let {
+                            json.encodeToJsonElement(MetricStatus.serializer(), it)
+                        } ?: JsonNull
+                    )
+                }
 
                 else -> put("error", "unsupported type")
             }

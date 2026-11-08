@@ -62,3 +62,20 @@ data class WeatherStatus(
             String.format(java.util.Locale.ROOT, "%.2f,%.2f", latitude, longitude)
     }
 }
+
+/**
+ * A number tracked over time (e.g. X followers under key `x:<username>`). [changeLastDay] compares the latest
+ * value with the one closest to 24 h earlier; null until there is a reading that old.
+ */
+@Serializable
+data class MetricStatus(
+    val key: String,
+    val value: Long? = null,
+    val changeLastDay: Long? = null,
+    val error: String? = null,
+    val checkedAtMillis: Long
+) {
+    companion object {
+        fun xFollowersKey(username: String) = "x:${username.lowercase()}"
+    }
+}

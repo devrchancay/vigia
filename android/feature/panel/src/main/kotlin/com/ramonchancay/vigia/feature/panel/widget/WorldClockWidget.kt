@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -98,10 +99,12 @@ private fun CityRow(city: CityTime) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(city.time, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+        // Fixed width so times line up whether or not a city shows a day offset.
         Text(
             city.offsetLabel(),
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.secondary
+            color = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.width(24.dp)
         )
     }
 }

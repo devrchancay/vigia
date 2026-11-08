@@ -9,6 +9,7 @@ import com.ramonchancay.vigia.core.data.events.EventRepository
 import com.ramonchancay.vigia.core.data.status.StatusRepository
 import com.ramonchancay.vigia.core.device.DeviceStatus
 import com.ramonchancay.vigia.core.device.DeviceStatusRepository
+import com.ramonchancay.vigia.core.model.MetricStatus
 import com.ramonchancay.vigia.core.model.StoredEvent
 import com.ramonchancay.vigia.core.model.UptimeStatus
 import com.ramonchancay.vigia.core.model.WeatherStatus
@@ -80,6 +81,11 @@ class PanelViewModel @Inject constructor(
     /** Latest weather reading per point (latitude,longitude key). */
     val weather: StateFlow<Map<String, WeatherStatus>> = statusRepository.weather
         .catch { Timber.e(it, "Weather status failed") }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyMap())
+
+    /** Tracked numbers (X followers), with their change over the last day. */
+    val metrics: StateFlow<Map<String, MetricStatus>> = statusRepository.metrics
+        .catch { Timber.e(it, "Metrics failed") }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyMap())
 
     /** Pushed events, newest first; widgets drop expired ones with the panel clock. */

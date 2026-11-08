@@ -10,6 +10,7 @@ import com.ramonchancay.vigia.feature.sources.github.GithubActionsClient
 import com.ramonchancay.vigia.feature.sources.github.RunsResponse
 import com.ramonchancay.vigia.feature.sources.uptime.UptimeChecker
 import com.ramonchancay.vigia.feature.sources.weather.WeatherClient
+import com.ramonchancay.vigia.feature.sources.x.XClient
 import java.time.Clock
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,11 +36,12 @@ class SourceScheduler @Inject constructor(
     private val github: GithubActionsClient,
     private val secrets: SecretStore,
     private val weatherClient: WeatherClient,
+    private val xClient: XClient,
     private val clock: Clock
 ) : AlwaysOnTask {
     override suspend fun run() {
         configRepository.config.map(SourcePlan::from).distinctUntilChanged().collectLatest { plan ->
-            status.retainOnly(plan.uptime.keys, plan.github.keys, plan.weather.keys)
+            status.retainOnly(plan.uptime.keys, plan.github.keys, plan.weather.keys, plan.xFollowers.keys)
             Timber.i(
                 "Polling %d uptime, %d GitHub and %d weather sources",
                 plan.uptime.size,
@@ -50,6 +52,7 @@ class SourceScheduler @Inject constructor(
                 plan.uptime.values.forEach { launch { pollUptime(it) } }
                 plan.github.values.forEach { launch { pollGithub(it) } }
                 plan.weather.values.forEach { launch { pollWeather(it) } }
+                plan.xFollowers.values.forEach { launch { pollXFollowers(it) } }
             }
         }
     }
@@ -147,6 +150,24 @@ class SourceScheduler @Inject constructor(
                 )
             )
             failures = if (reading.isSuccess) 0 else failures + 1
+            delay(SourcePlan.nextDelayMillis(job.intervalSec, failures, Random.nextDouble()))
+        }
+    }
+
+    private suspend fun pollXFollowers(job: XFollowersJob) {
+        var failures = 0
+        while (true) {
+            val token = secrets.get(job.tokenSecret)
+            val result = if (token == null) {
+                Result.failure(IllegalStateException("Secret '${job.tokenSecret}' is not set"))
+            } else {
+                xClient.followers(job.username, token)
+            }
+            result.fold(
+                onSuccess = { status.recordMetric(job.key, it, clock.millis()) },
+                onFailure = { status.recordMetricError(job.key, it.message ?: it.javaClass.simpleName, clock.millis()) }
+            )
+            failures = if (result.isSuccess) 0 else failures + 1
             delay(SourcePlan.nextDelayMillis(job.intervalSec, failures, Random.nextDouble()))
         }
     }
