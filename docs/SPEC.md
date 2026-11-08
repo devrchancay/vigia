@@ -101,6 +101,7 @@ Validation rules (implemented in `core/model`, `PanelConfigValidator`): unknown 
 | `note` | config | short text for reminders. `params.text` (1–500 chars) |
 | `world_clock` | device | time in 1–6 cities (`zones: [{label, zone}]`, IANA ids like `Europe/Madrid`), with +1/−1 when the day differs |
 | `weather` | poller (Open-Meteo, no key) | temperature, sky, feels-like, today's max/min, rain probability. `params`: `name`, `latitude`, `longitude`, `intervalSec` 600–3600 (default 900) |
+| `web` | network (WebView) | an embedded https page filling the tile, e.g. a Spotify playlist embed (`https://open.spotify.com/embed/playlist/<id>`); links to other hosts are blocked. Spotify embeds play 30 s previews unless signed in inside the embed |
 | `x_followers` | poller (X API v2, paid per read) | follower count and change over 24 h. `params`: `username`, `tokenSecret` (bearer token stored with `PUT /secrets/{name}`), `intervalSec` 3600–86400 (default 21600) |
 
 Generic `metric`, `feed` and `note` mean any script can drive the panel without new app code.
