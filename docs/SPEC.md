@@ -129,10 +129,10 @@ Every accepted config change is stored with a timestamp and author (from a heade
 | `GET /config/history` | list of previous versions |
 | `POST /widgets` / `PATCH /widgets/{id}` / `DELETE /widgets/{id}` | widget-level edits |
 | `POST /widgets/{id}/data` | push data to `metric`/`note` widgets |
-| `GET /widgets/types` | widget catalog with param schemas (lets agents discover what is possible) |
+| `GET /widgets/types` | widget catalog with param specs (type, required, default, description) so agents discover what is possible |
 | `POST /events` / `GET /events` / `DELETE /events/{source}[/{key}]` | push, list and remove events (see below) |
 | `GET /status` | current data of every widget (what the screen shows, as JSON) |
-| `GET /screenshot` | PNG of the current panel (PixelCopy) so agents can verify changes |
+| `GET /screenshot` | PNG of the current panel (PixelCopy) so agents can verify changes; 503 when the panel is not on screen |
 | `POST /commands` | `reload`, `brightness`, `screen_on`, `screen_off`, `toast`, `identify` (flash the screen) |
 | `GET /secrets` / `PUT /secrets/{name}` / `DELETE /secrets/{name}` | write-only secrets (list returns names only) |
 

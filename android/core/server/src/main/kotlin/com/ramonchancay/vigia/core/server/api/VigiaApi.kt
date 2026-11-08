@@ -10,7 +10,9 @@ import com.ramonchancay.vigia.core.model.PanelConfig
 import com.ramonchancay.vigia.core.model.PanelConfigParser
 import com.ramonchancay.vigia.core.model.PanelEvent
 import com.ramonchancay.vigia.core.model.StoredEvent
+import com.ramonchancay.vigia.core.model.WidgetCatalog
 import com.ramonchancay.vigia.core.model.WidgetParams
+import com.ramonchancay.vigia.core.model.WidgetTypeSpec
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -27,6 +29,7 @@ import io.ktor.server.plugins.ratelimit.rateLimit
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.receiveChannel
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
@@ -53,6 +56,8 @@ class ApiDependencies(
     val events: EventRepository,
     /** Current content of every widget for `GET /status`. */
     val statusSnapshot: suspend () -> JsonObject,
+    /** PNG of the panel for `GET /screenshot`; null when the panel is not on screen. */
+    val screenshot: suspend () -> ByteArray? = { null },
     val tokenMatches: suspend (String) -> Boolean,
     /** Whether a remote IP literal may call the API; see [IpAllowlist]. */
     val isAllowed: (String) -> Boolean,
@@ -111,6 +116,30 @@ fun Application.vigiaApi(deps: ApiDependencies) {
                 route("/status") {
                     install(bearerAuthPlugin(deps.tokenMatches))
                     get { call.respondText(deps.statusSnapshot().toString(), ContentType.Application.Json) }
+                }
+                route("/screenshot") {
+                    install(bearerAuthPlugin(deps.tokenMatches))
+                    get {
+                        val png = deps.screenshot()
+                        if (png == null) {
+                            call.respondError(
+                                HttpStatusCode.ServiceUnavailable,
+                                "panel_not_visible",
+                                "The panel is not on screen"
+                            )
+                        } else {
+                            call.respondBytes(png, ContentType.Image.PNG)
+                        }
+                    }
+                }
+                route("/widgets/types") {
+                    install(bearerAuthPlugin(deps.tokenMatches))
+                    get {
+                        call.respondText(
+                            responseJson.encodeToString(WIDGET_TYPES_SERIALIZER, WidgetCatalog.types),
+                            ContentType.Application.Json
+                        )
+                    }
                 }
             }
         }
@@ -213,6 +242,8 @@ private suspend fun ApplicationCall.respondDeleted(count: Int) = if (count >
 }
 
 private val EVENT_LIST_SERIALIZER = ListSerializer(StoredEvent.serializer())
+
+private val WIDGET_TYPES_SERIALIZER = ListSerializer(WidgetTypeSpec.serializer())
 
 /** Write-only: names can be listed, values are never returned. */
 private fun Route.secretRoutes(secrets: SecretStore, tokenMatches: suspend (String) -> Boolean) {

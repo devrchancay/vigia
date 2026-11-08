@@ -26,6 +26,7 @@ class VigiaServer @Inject constructor(
     private val secrets: SecretStore,
     private val events: EventRepository,
     private val statusSnapshot: StatusSnapshot,
+    private val screenCapture: ScreenCapture,
     private val tokenStore: ServerTokenStore
 ) {
     private var server: EmbeddedServer<*, *>? = null
@@ -42,6 +43,7 @@ class VigiaServer @Inject constructor(
             secrets = secrets,
             events = events,
             statusSnapshot = statusSnapshot::current,
+            screenshot = screenCapture::png,
             tokenMatches = tokenStore::matches,
             isAllowed = IpAllowlist.DEFAULT::allows,
             appVersion = appVersion(),

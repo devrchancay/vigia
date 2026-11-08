@@ -14,9 +14,11 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ramonchancay.vigia.core.designsystem.theme.VigiaTheme
+import com.ramonchancay.vigia.core.server.ScreenCapture
 import com.ramonchancay.vigia.core.server.VigiaServerService
 import com.ramonchancay.vigia.navigation.VigiaNavHost
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * Hosts the panel: a full-screen, always-on status display. The screen stays on while the panel is visible
@@ -25,6 +27,9 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
+
+    @Inject
+    lateinit var screenCapture: ScreenCapture
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
@@ -52,6 +57,12 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         // The remote-control server runs as a foreground service; starting it again is a no-op.
         VigiaServerService.start(this)
+        screenCapture.register(window)
+    }
+
+    override fun onStop() {
+        screenCapture.unregister(window)
+        super.onStop()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
