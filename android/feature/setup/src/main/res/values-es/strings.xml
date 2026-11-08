@@ -11,4 +11,15 @@
     <string name="setup_rotate_message">Los clientes que usan el token actual dejarán de funcionar hasta que les des el nuevo.</string>
     <string name="setup_rotate_confirm">Rotar</string>
     <string name="setup_cancel">Cancelar</string>
+    <string name="kiosk_title">Kiosk</string>
+    <string name="kiosk_owner_yes">Device owner: el panel está fijado y arranca al encender.</string>
+    <string name="kiosk_owner_no">No es device owner: el panel arranca al encender como app de inicio. Mira docs/KIOSK.md para el kiosk completo.</string>
+    <string name="kiosk_make_home">Usar como app de inicio</string>
+    <string name="kiosk_is_home">Vigía es la app de inicio.</string>
+    <string name="kiosk_no_pin">No hay PIN de kiosk. Configúralo con: vigia secret set kiosk-pin</string>
+    <string name="kiosk_wrong_pin">PIN incorrecto</string>
+    <string name="kiosk_exit">Salir del kiosk</string>
+    <string name="kiosk_release">Liberar device owner</string>
+    <string name="kiosk_pin_title">PIN del kiosk</string>
+    <string name="kiosk_confirm">Continuar</string>
 </resources>

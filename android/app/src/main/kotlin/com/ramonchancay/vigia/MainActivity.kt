@@ -1,5 +1,6 @@
 package com.ramonchancay.vigia
 
+import android.content.ComponentName
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -14,6 +15,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ramonchancay.vigia.core.designsystem.theme.VigiaTheme
+import com.ramonchancay.vigia.core.device.KioskController
 import com.ramonchancay.vigia.core.server.ScreenCapture
 import com.ramonchancay.vigia.core.server.VigiaServerService
 import com.ramonchancay.vigia.navigation.VigiaNavHost
@@ -31,6 +33,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var screenCapture: ScreenCapture
 
+    @Inject
+    lateinit var kiosk: KioskController
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -44,6 +49,7 @@ class MainActivity : ComponentActivity() {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
         }
+        kiosk.applyDeviceOwnerPolicies(ComponentName(this, MainActivity::class.java))
         hideSystemBars()
         setContent {
             val startDestination by viewModel.startDestination.collectAsStateWithLifecycle()
@@ -58,6 +64,12 @@ class MainActivity : ComponentActivity() {
         // The remote-control server runs as a foreground service; starting it again is a no-op.
         VigiaServerService.start(this)
         screenCapture.register(window)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // As device owner the panel pins itself: no home, recents or notification shade until released.
+        if (kiosk.isDeviceOwner && !kiosk.state().isLockTaskActive) startLockTask()
     }
 
     override fun onStop() {
