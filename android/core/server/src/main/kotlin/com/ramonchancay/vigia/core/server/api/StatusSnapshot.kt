@@ -1,10 +1,12 @@
 package com.ramonchancay.vigia.core.server.api
 
 import com.ramonchancay.vigia.core.data.config.PanelConfigEditor
+import com.ramonchancay.vigia.core.data.events.EventRepository
 import com.ramonchancay.vigia.core.data.status.StatusRepository
 import com.ramonchancay.vigia.core.device.DeviceStatus
 import com.ramonchancay.vigia.core.device.DeviceStatusRepository
 import com.ramonchancay.vigia.core.model.PanelConfig
+import com.ramonchancay.vigia.core.model.StoredEvent
 import com.ramonchancay.vigia.core.model.UptimeStatus
 import com.ramonchancay.vigia.core.model.WidgetConfig
 import com.ramonchancay.vigia.core.model.WidgetParams
@@ -27,6 +29,7 @@ class StatusSnapshot @Inject constructor(
     private val editor: PanelConfigEditor,
     private val status: StatusRepository,
     private val device: DeviceStatusRepository,
+    private val events: EventRepository,
     private val clock: Clock
 ) {
     suspend fun current(): JsonObject = build(
@@ -34,6 +37,7 @@ class StatusSnapshot @Inject constructor(
         uptime = status.uptime.first(),
         workflows = status.workflows.first(),
         device = device.status().first(),
+        events = events.active(),
         nowMillis = clock.millis()
     )
 
@@ -45,13 +49,15 @@ class StatusSnapshot @Inject constructor(
             uptime: Map<String, UptimeStatus>,
             workflows: Map<String, WorkflowRunStatus>,
             device: DeviceStatus?,
-            nowMillis: Long
+            nowMillis: Long,
+            events: List<StoredEvent> = emptyList()
         ): JsonObject = buildJsonObject {
             put("generatedAt", Instant.ofEpochMilli(nowMillis).toString())
+            val active = events.filter { it.expiresAtMillis > nowMillis }
             put(
                 "widgets",
                 buildJsonObject {
-                    config.widgets.forEach { put(it.id, widget(it, uptime, workflows, device, nowMillis)) }
+                    config.widgets.forEach { put(it.id, widget(it, uptime, workflows, device, active, nowMillis)) }
                 }
             )
         }
@@ -61,6 +67,7 @@ class StatusSnapshot @Inject constructor(
             uptime: Map<String, UptimeStatus>,
             workflows: Map<String, WorkflowRunStatus>,
             device: DeviceStatus?,
+            events: List<StoredEvent>,
             nowMillis: Long
         ): JsonObject = buildJsonObject {
             put("type", widget.type)
@@ -119,9 +126,29 @@ class StatusSnapshot @Inject constructor(
                     )
                 }
 
+                WidgetTypes.AGENTS -> {
+                    val source = WidgetParams.agents(widget).value?.source
+                    put("sessions", eventsJson(events.filter { it.source == source }))
+                }
+
+                WidgetTypes.FEED -> {
+                    val params = WidgetParams.feed(widget).value
+                    put(
+                        "items",
+                        eventsJson(
+                            events.filter {
+                                params != null && it.source in params.sources
+                            }.take(params?.max ?: 0)
+                        )
+                    )
+                }
+
                 else -> put("error", "unsupported type")
             }
         }
+
+        private fun eventsJson(events: List<StoredEvent>) =
+            buildJsonArray { events.forEach { add(json.encodeToJsonElement(StoredEvent.serializer(), it)) } }
 
         private fun DeviceStatus.toJson(): JsonElement = buildJsonObject {
             put(

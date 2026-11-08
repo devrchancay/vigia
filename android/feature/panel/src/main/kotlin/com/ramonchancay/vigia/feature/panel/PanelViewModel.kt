@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.ramonchancay.vigia.core.common.result.Result
 import com.ramonchancay.vigia.core.common.result.asResult
 import com.ramonchancay.vigia.core.data.config.PanelConfigRepository
+import com.ramonchancay.vigia.core.data.events.EventRepository
 import com.ramonchancay.vigia.core.data.status.StatusRepository
 import com.ramonchancay.vigia.core.device.DeviceStatus
 import com.ramonchancay.vigia.core.device.DeviceStatusRepository
+import com.ramonchancay.vigia.core.model.StoredEvent
 import com.ramonchancay.vigia.core.model.UptimeStatus
 import com.ramonchancay.vigia.core.model.WorkflowRunStatus
 import com.ramonchancay.vigia.feature.panel.data.ClockRepository
@@ -30,7 +32,8 @@ class PanelViewModel @Inject constructor(
     configRepository: PanelConfigRepository,
     clockRepository: ClockRepository,
     deviceStatusRepository: DeviceStatusRepository,
-    statusRepository: StatusRepository
+    statusRepository: StatusRepository,
+    eventRepository: EventRepository
 ) : ViewModel() {
     private val retries = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
@@ -72,6 +75,11 @@ class PanelViewModel @Inject constructor(
     val workflows: StateFlow<Map<String, WorkflowRunStatus>> = statusRepository.workflows
         .catch { Timber.e(it, "Workflow status failed") }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyMap())
+
+    /** Pushed events, newest first; widgets drop expired ones with the panel clock. */
+    val events: StateFlow<List<StoredEvent>> = eventRepository.events
+        .catch { Timber.e(it, "Events failed") }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
     fun onAction(action: PanelAction) {
         when (action) {

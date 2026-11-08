@@ -95,8 +95,8 @@ Validation rules (implemented in `core/model`, `PanelConfigValidator`): unknown 
 | `device` | device | battery %, temperature (warns at 40 °C), charging, memory, Wi-Fi signal. `params.show` picks rows: `battery`, `batteryTemp`, `memory`, `wifi` (default: all). No SSID: reading it needs the location permission |
 | `uptime` | poller | status, latency, last change; red/amber/green. `params`: `targets` (1–20 of `{name, url, expectStatus?}`), `intervalSec` 15–3600 (default 60), `slowMs` (amber above it, default 1000) |
 | `github_actions` | poller | latest run per repo/workflow, conclusion, duration. `params`: `repos` (1–10 `owner/repo`), `branch?`, `workflow?` (file name or id), `intervalSec` 30–3600 (default 60), `tokenSecret?` |
-| `agents` | pushed events (`source: claude-code`) | one row per session: working / waiting for permission / done |
-| `feed` | pushed events filtered by `source` | latest N items, unread badge, TTL |
+| `agents` | pushed events (`source: claude-code`) | one row per session (event key): waiting for permission first (red), then working (amber), then done (green). `params`: `source` (default `claude-code`), `max` 1–20 (default 6). Event `kind`: `working`, `waiting_permission`, `done` |
+| `feed` | pushed events filtered by `source` | newest items with level color, source (when mixed) and age; expired items hidden. `params`: `sources` (1–10), `max` 1–20 (default 5), `showBody`. Tickets: `sources: ["jira", "hub"]` |
 | `metric` | pushed value | big number + label + optional trend (generic) |
 | `note` | config | short text for reminders. `params.text` (1–500 chars) |
 

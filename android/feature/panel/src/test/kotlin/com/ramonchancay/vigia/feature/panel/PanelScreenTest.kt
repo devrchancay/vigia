@@ -1,6 +1,8 @@
 package com.ramonchancay.vigia.feature.panel
 
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -12,12 +14,15 @@ import com.ramonchancay.vigia.core.device.DeviceStatus
 import com.ramonchancay.vigia.core.device.MemoryStatus
 import com.ramonchancay.vigia.core.device.WifiStatus
 import com.ramonchancay.vigia.core.model.ConfigParseResult
+import com.ramonchancay.vigia.core.model.EventLevel
 import com.ramonchancay.vigia.core.model.PanelConfig
 import com.ramonchancay.vigia.core.model.PanelConfigParser
+import com.ramonchancay.vigia.core.model.StoredEvent
 import com.ramonchancay.vigia.core.model.UptimeStatus
 import com.ramonchancay.vigia.core.model.WidgetConfig
 import com.ramonchancay.vigia.core.model.WidgetPosition
 import com.ramonchancay.vigia.core.model.WorkflowRunStatus
+import com.ramonchancay.vigia.feature.panel.widget.AGENT_ROW_TAG
 import com.ramonchancay.vigia.feature.panel.widget.CLOCK_TIME_TAG
 import com.ramonchancay.vigia.feature.panel.widget.DEVICE_ROW_TAG
 import com.ramonchancay.vigia.feature.panel.widget.WidgetData
@@ -45,8 +50,16 @@ class PanelScreenTest {
         device: DeviceStatus? = null,
         uptime: Map<String, UptimeStatus> = emptyMap(),
         workflows: Map<String, WorkflowRunStatus> = emptyMap(),
+        events: List<StoredEvent> = emptyList(),
         zone: ZoneId = ZoneOffset.UTC
-    ) = WidgetData(mutableStateOf(now), mutableStateOf(device), mutableStateOf(uptime), mutableStateOf(workflows), zone)
+    ) = WidgetData(
+        mutableStateOf(now),
+        mutableStateOf(device),
+        mutableStateOf(uptime),
+        mutableStateOf(workflows),
+        mutableStateOf(events),
+        zone
+    )
 
     private val config = PanelConfig(
         schemaVersion = 1,
@@ -84,6 +97,7 @@ class PanelScreenTest {
                 mutableStateOf(null),
                 mutableStateOf(emptyMap()),
                 mutableStateOf(emptyMap()),
+                mutableStateOf(emptyList()),
                 ZoneOffset.UTC
             )
         composeRule.setContent { PanelScreen(uiState = PanelUiState.Ready(config), data = data, onAction = {}) }
@@ -210,6 +224,59 @@ class PanelScreenTest {
         composeRule.onNodeWithText("Sat 7 Nov").assertExists()
         composeRule.onNodeWithText("92% ⚡").assertExists()
         composeRule.onNodeWithText("1.0/2.0 GB").assertExists()
+    }
+
+    @Test
+    fun agentsPutSessionsWaitingForPermissionFirstAndFeedMixesSources() {
+        val now = Instant.parse("2026-11-07T12:00:00Z").toEpochMilli()
+        fun event(
+            id: String,
+            source: String,
+            title: String,
+            kind: String? = null,
+            minutesAgo: Long = 1,
+            expired: Boolean = false
+        ) = StoredEvent(
+            id = id,
+            source = source,
+            key = id,
+            kind = kind,
+            title = title,
+            level = EventLevel.Warn,
+            receivedAtMillis = now - minutesAgo * 60_000,
+            expiresAtMillis = if (expired) now - 1 else now + 3_600_000
+        )
+        val events = listOf(
+            event("s1", "claude-code", "vigia: building", kind = "working", minutesAgo = 2),
+            event("s2", "claude-code", "pet-meet: needs permission", kind = "waiting_permission", minutesAgo = 10),
+            event("s3", "claude-code", "parejo: done", kind = "done", minutesAgo = 30),
+            event("s4", "claude-code", "old session", kind = "working", expired = true),
+            event("t1", "jira", "NA-123 Fix login", minutesAgo = 5),
+            event("t2", "hub", "PSG-9 Landing", minutesAgo = 60)
+        )
+        val config = (
+            PanelConfigParser.parse(
+                """
+                {"schemaVersion":1,"widgets":[
+                  {"id":"agents","type":"agents","pos":{"x":0,"y":0,"w":4,"h":4}},
+                  {"id":"tickets","type":"feed","title":"Tickets","pos":{"x":4,"y":0,"w":4,"h":4},"params":{"sources":["jira","hub"]}}
+                ]}
+                """.trimIndent()
+            ) as ConfigParseResult.Valid
+            ).config
+        val data = data(now = Instant.ofEpochMilli(now), events = events)
+        composeRule.setContent { PanelScreen(uiState = PanelUiState.Ready(config), data = data, onAction = {}) }
+
+        val agentRows = composeRule.onAllNodes(hasTestTagStartingWith(AGENT_ROW_TAG)).fetchSemanticsNodes()
+            .map { it.config[SemanticsProperties.TestTag] }
+        assertEquals(listOf("agent_row_s2", "agent_row_s1", "agent_row_s3"), agentRows)
+        composeRule.onNodeWithText("old session").assertDoesNotExist()
+        composeRule.onNodeWithText("jira · 5m").assertExists()
+        composeRule.onNodeWithText("hub · 1h").assertExists()
+    }
+
+    private fun hasTestTagStartingWith(prefix: String) = SemanticsMatcher("test tag starts with $prefix") { node ->
+        node.config.getOrElseNullable(SemanticsProperties.TestTag) { null }?.startsWith(prefix) == true
     }
 
     @Test

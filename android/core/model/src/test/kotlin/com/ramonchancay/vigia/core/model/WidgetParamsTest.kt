@@ -66,6 +66,14 @@ class WidgetParamsTest {
     }
 
     @Test
+    fun `agents and feed params`() {
+        assertEquals(AgentsParams(), WidgetParams.agents(widget("agents", "{}")).value)
+        assertEquals(listOf("params.max"), paths("agents", """{"max":0}"""))
+        assertEquals(listOf("params.sources[1]"), paths("feed", """{"sources":["jira","Hub!"]}"""))
+        assertEquals(listOf("params.sources"), paths("feed", """{"sources":[]}"""))
+    }
+
+    @Test
     fun `types without params and unknown types are not checked`() {
         assertTrue(WidgetParams.validate(widget("clock", "{}")).isEmpty())
         assertTrue(
