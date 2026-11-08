@@ -21,6 +21,9 @@ import java.net.URI
 
 internal const val WEB_TAG = "web_widget"
 
+/** Permissions player embeds ask their iframe for (playback, DRM, fullscreen). */
+private const val IFRAME_ALLOW = "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+
 /**
  * An embedded page filling the tile (for example a Spotify playlist embed). Navigation stays on the page's
  * own host: links to other sites are ignored, so nobody can browse away from the panel.
@@ -36,11 +39,34 @@ internal fun WebWidget(widget: WidgetConfig, modifier: Modifier = Modifier) {
     val host = remember(url) { URI(url).host }
     AndroidView(
         modifier = modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)).testTag(WEB_TAG),
-        // Load once the view has its size: embeds like Spotify's pick their layout from the height at load time.
-        factory = { context -> createWebView(context, host).apply { doOnLayout { loadUrl(url) } } },
-        update = { view -> if (view.url != url && view.originalUrl != url) view.loadUrl(url) },
+        // Load only once the view has its size: a page loaded at height 0 keeps a 0-height viewport (100vh = 0),
+        // and embeds such as Spotify's then fall back to their compact layout or render nothing.
+        factory = { context -> createWebView(context, host).apply { doOnLayout { load(url, host) } } },
+        update = { view -> if (view.isLaidOut && view.tag != url) view.load(url, host) },
         onRelease = { it.destroy() }
     )
+}
+
+/**
+ * Player embeds (Spotify, YouTube: URLs with `/embed/`) are made to live inside an iframe and fall back to a
+ * compact layout when opened as the top page, so they get a full-size iframe; other pages load directly, since
+ * many sites refuse to be framed.
+ */
+private fun WebView.load(url: String, host: String) {
+    tag = url
+    if ("/embed/" in url) {
+        val src = url.replace("\"", "%22")
+        // Height comes from innerHeight in script: WebView can keep 100vh at 0 when the viewport was computed
+        // before the view had a size, which leaves the iframe invisible.
+        val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+            <style>html,body{margin:0;background:transparent;overflow:hidden}iframe{display:block;border:0;width:100%}</style>
+            </head><body><iframe id="f" src="$src" allow="$IFRAME_ALLOW"></iframe>
+            <script>const f=document.getElementById('f');const fit=()=>{f.style.height=innerHeight+'px'};
+            addEventListener('resize',fit);fit();</script></body></html>"""
+        loadDataWithBaseURL("https://$host/", html, "text/html", "utf-8", null)
+    } else {
+        loadUrl(url)
+    }
 }
 
 // Embeds such as Spotify's player need JavaScript and DOM storage; content is limited to the configured host.
