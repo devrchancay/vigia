@@ -5,6 +5,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -277,6 +278,26 @@ class PanelScreenTest {
 
     private fun hasTestTagStartingWith(prefix: String) = SemanticsMatcher("test tag starts with $prefix") { node ->
         node.config.getOrElseNullable(SemanticsProperties.TestTag) { null }?.startsWith(prefix) == true
+    }
+
+    @Test
+    fun worldClockShowsEachCityWithItsDayOffset() {
+        val config = (
+            PanelConfigParser.parse(
+                """
+                {"schemaVersion":1,"widgets":[{"id":"world","type":"world_clock","pos":{"x":0,"y":0,"w":4,"h":4},"params":{"zones":[
+                  {"label":"Valencia","zone":"Europe/Madrid"},{"label":"Santiago","zone":"America/Santiago"},{"label":"Sydney","zone":"Australia/Sydney"}]}}]}
+                """.trimIndent()
+            ) as ConfigParseResult.Valid
+            ).config
+        // 19:30 in Guayaquil (UTC-5) on Saturday 7 Nov 2026.
+        val data = data(now = Instant.parse("2026-11-08T00:30:00Z"), zone = ZoneId.of("America/Guayaquil"))
+        composeRule.setContent { PanelScreen(uiState = PanelUiState.Ready(config), data = data, onAction = {}) }
+
+        composeRule.onNodeWithText("01:30").assertExists()
+        composeRule.onNodeWithText("21:30").assertExists()
+        composeRule.onNodeWithText("11:30").assertExists()
+        assertEquals(2, composeRule.onAllNodesWithText("+1").fetchSemanticsNodes().size)
     }
 
     @Test

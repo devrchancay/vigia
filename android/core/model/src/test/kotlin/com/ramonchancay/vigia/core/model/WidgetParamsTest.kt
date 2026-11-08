@@ -74,6 +74,16 @@ class WidgetParamsTest {
     }
 
     @Test
+    fun `world clock zones must be real time zones`() {
+        assertTrue(paths("world_clock", """{"zones":[{"label":"Valencia","zone":"Europe/Madrid"}]}""").isEmpty())
+        assertEquals(
+            listOf("params.zones[0].zone"),
+            paths("world_clock", """{"zones":[{"label":"Mars","zone":"Mars/Olympus"}]}""")
+        )
+        assertEquals(listOf("params.zones"), paths("world_clock", """{"zones":[]}"""))
+    }
+
+    @Test
     fun `types without params and unknown types are not checked`() {
         assertTrue(WidgetParams.validate(widget("clock", "{}")).isEmpty())
         assertTrue(

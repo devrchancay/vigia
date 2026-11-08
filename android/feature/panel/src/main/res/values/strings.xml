@@ -23,4 +23,5 @@
     <string name="agents_empty">No agent sessions</string>
     <string name="feed_title">Feed</string>
     <string name="feed_empty">Nothing new</string>
+    <string name="world_clock_title">World time</string>
 </resources>

@@ -25,6 +25,8 @@ internal fun PanelWidget(widget: WidgetConfig, data: WidgetData, modifier: Modif
 
         WidgetTypes.FEED -> FeedWidget(widget = widget, data = data, modifier = modifier)
 
+        WidgetTypes.WORLD_CLOCK -> WorldClockWidget(widget = widget, data = data, modifier = modifier)
+
         else -> ErrorTile(
             title = widget.title ?: widget.id,
             message = stringResource(R.string.widget_unsupported_type, widget.type),
