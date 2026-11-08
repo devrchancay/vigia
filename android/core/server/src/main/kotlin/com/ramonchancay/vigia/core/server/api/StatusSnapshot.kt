@@ -195,6 +195,8 @@ class StatusSnapshot @Inject constructor(
                     )
                 }
 
+                WidgetTypes.WEB -> put("url", WidgetParams.web(widget).value?.url)
+
                 else -> put("error", "unsupported type")
             }
         }

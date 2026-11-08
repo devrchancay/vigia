@@ -30,6 +30,7 @@ import com.ramonchancay.vigia.feature.panel.widget.CLOCK_TIME_TAG
 import com.ramonchancay.vigia.feature.panel.widget.DEVICE_ROW_TAG
 import com.ramonchancay.vigia.feature.panel.widget.METRIC_VALUE_TAG
 import com.ramonchancay.vigia.feature.panel.widget.WEATHER_TEMP_TAG
+import com.ramonchancay.vigia.feature.panel.widget.WEB_TAG
 import com.ramonchancay.vigia.feature.panel.widget.WidgetData
 import java.time.Instant
 import java.time.ZoneId
@@ -357,6 +358,36 @@ class PanelScreenTest {
         composeRule.onNodeWithTag(METRIC_VALUE_TAG).assertTextEquals("12,345")
         composeRule.onNodeWithText("+27 in 24 h").assertExists()
         composeRule.onNodeWithText("X · @SOMEONE").assertExists()
+    }
+
+    @Test
+    fun webWidgetEmbedsValidUrlsAndRejectsOthers() {
+        val config = (
+            PanelConfigParser.parse(
+                """
+                {"schemaVersion":1,"widgets":[
+                  {"id":"music","type":"web","pos":{"x":0,"y":0,"w":4,"h":4},"params":{"url":"https://open.spotify.com/embed/playlist/abc"}}]}
+                """.trimIndent()
+            ) as ConfigParseResult.Valid
+            ).config
+        val invalid = PanelConfig(
+            schemaVersion = 1,
+            widgets = listOf(
+                WidgetConfig(
+                    "bad",
+                    "web",
+                    WidgetPosition(0, 0, 4, 4),
+                    params = JsonObject(mapOf("url" to JsonPrimitive("http://x")))
+                )
+            )
+        )
+        val state = mutableStateOf<PanelUiState>(PanelUiState.Ready(config))
+        val data = data()
+        composeRule.setContent { PanelScreen(uiState = state.value, data = data, onAction = {}) }
+
+        composeRule.onNodeWithTag(WEB_TAG).assertExists()
+        state.value = PanelUiState.Ready(invalid)
+        composeRule.onNodeWithText("Invalid parameter: params.url").assertExists()
     }
 
     @Test

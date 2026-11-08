@@ -17,6 +17,7 @@ object WidgetTypes {
     const val WORLD_CLOCK = "world_clock"
     const val WEATHER = "weather"
     const val X_FOLLOWERS = "x_followers"
+    const val WEB = "web"
 
     val DEVICE_ROWS = listOf("battery", "batteryTemp", "memory", "wifi")
 }
@@ -72,6 +73,10 @@ data class WeatherParams(val name: String, val latitude: Double, val longitude: 
  */
 @Serializable
 data class XFollowersParams(val username: String, val tokenSecret: String, val intervalSec: Int = 21_600)
+
+/** An embedded web page, e.g. a Spotify playlist embed (`https://open.spotify.com/embed/playlist/<id>`). */
+@Serializable
+data class WebParams(val url: String)
 
 /** Decoding and checking of `params` per widget type. Errors carry paths relative to the widget (`params.x`). */
 object WidgetParams {
@@ -280,6 +285,13 @@ object WidgetParams {
         }
     }
 
+    fun web(widget: WidgetConfig): Decoded<WebParams> = decode(widget, WebParams.serializer()) { params, errors ->
+        val uri = runCatching { java.net.URI(params.url) }.getOrNull()
+        if (uri?.scheme != "https" || uri.host.isNullOrEmpty() || params.url.length > 500) {
+            errors += error(ConfigError.Code.InvalidFormat, "url", "An https URL of at most 500 characters")
+        }
+    }
+
     /** Params errors for a known [WidgetConfig.type]; empty for valid params and for unknown types. */
     fun validate(widget: WidgetConfig): List<ConfigError> = when (widget.type) {
         WidgetTypes.NOTE -> note(widget).errors
@@ -291,6 +303,7 @@ object WidgetParams {
         WidgetTypes.WORLD_CLOCK -> worldClock(widget).errors
         WidgetTypes.WEATHER -> weather(widget).errors
         WidgetTypes.X_FOLLOWERS -> xFollowers(widget).errors
+        WidgetTypes.WEB -> web(widget).errors
         else -> emptyList()
     }
 

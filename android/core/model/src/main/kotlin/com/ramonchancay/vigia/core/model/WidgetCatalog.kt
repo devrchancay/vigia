@@ -99,6 +99,18 @@ object WidgetCatalog {
             )
         ),
         WidgetTypeSpec(
+            WidgetTypes.WEB,
+            "An embedded web page (e.g. a Spotify playlist embed). Links to other sites are blocked.",
+            listOf(
+                ParamSpec(
+                    "url",
+                    "string",
+                    required = true,
+                    description = "https URL, e.g. https://open.spotify.com/embed/playlist/<id>"
+                )
+            )
+        ),
+        WidgetTypeSpec(
             WidgetTypes.X_FOLLOWERS,
             "Follower count of an X account and its change over 24 h (official API, billed per read).",
             listOf(

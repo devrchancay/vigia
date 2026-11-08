@@ -84,6 +84,13 @@ class WidgetParamsTest {
     }
 
     @Test
+    fun `web widgets only take https urls`() {
+        assertTrue(paths("web", """{"url":"https://open.spotify.com/embed/playlist/abc"}""").isEmpty())
+        assertEquals(listOf("params.url"), paths("web", """{"url":"http://example.com"}"""))
+        assertEquals(listOf("params.url"), paths("web", """{"url":"javascript:alert(1)"}"""))
+    }
+
+    @Test
     fun `types without params and unknown types are not checked`() {
         assertTrue(WidgetParams.validate(widget("clock", "{}")).isEmpty())
         assertTrue(
