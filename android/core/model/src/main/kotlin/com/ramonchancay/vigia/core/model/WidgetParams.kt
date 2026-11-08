@@ -14,6 +14,7 @@ object WidgetTypes {
     const val GITHUB_ACTIONS = "github_actions"
     const val AGENTS = "agents"
     const val FEED = "feed"
+    const val WORLD_CLOCK = "world_clock"
 
     val DEVICE_ROWS = listOf("battery", "batteryTemp", "memory", "wifi")
 }
@@ -52,6 +53,13 @@ data class AgentsParams(val source: String = "claude-code", val max: Int = 6)
 @Serializable
 data class FeedParams(val sources: List<String>, val max: Int = 5, val showBody: Boolean = false)
 
+/** A city on the world clock: [zone] is an IANA time zone id such as `Europe/Madrid`. */
+@Serializable
+data class WorldZone(val label: String, val zone: String)
+
+@Serializable
+data class WorldClockParams(val zones: List<WorldZone>)
+
 /** Decoding and checking of `params` per widget type. Errors carry paths relative to the widget (`params.x`). */
 object WidgetParams {
     private val json = Json { ignoreUnknownKeys = false }
@@ -64,6 +72,7 @@ object WidgetParams {
     const val MAX_REPOS = 10
     const val MAX_NOTE_LENGTH = 500
     const val MAX_ROWS = 20
+    const val MAX_WORLD_ZONES = 6
 
     fun note(widget: WidgetConfig): Decoded<NoteParams> = decode(widget, NoteParams.serializer()) { params, errors ->
         if (params.text.isBlank()) errors += error(ConfigError.Code.InvalidFormat, "text", "Must not be blank")
@@ -178,6 +187,32 @@ object WidgetParams {
         if (params.max !in 1..MAX_ROWS) errors += error(ConfigError.Code.OutOfRange, "max", "Between 1 and $MAX_ROWS")
     }
 
+    fun worldClock(widget: WidgetConfig): Decoded<WorldClockParams> = decode(widget, WorldClockParams.serializer()) {
+            params,
+            errors
+        ->
+        if (params.zones.isEmpty() || params.zones.size > MAX_WORLD_ZONES) {
+            errors += error(ConfigError.Code.OutOfRange, "zones", "Between 1 and $MAX_WORLD_ZONES zones")
+        }
+        params.zones.forEachIndexed { i, zone ->
+            if (zone.label.isBlank() ||
+                zone.label.length > 24
+            ) {
+                errors +=
+                    error(ConfigError.Code.InvalidFormat, "zones[$i].label", "1-24 characters")
+            }
+            val valid = runCatching { java.time.ZoneId.of(zone.zone) }.isSuccess
+            if (!valid) {
+                errors +=
+                    error(
+                        ConfigError.Code.InvalidFormat,
+                        "zones[$i].zone",
+                        "Unknown time zone '${zone.zone}', e.g. Europe/Madrid"
+                    )
+            }
+        }
+    }
+
     /** Params errors for a known [WidgetConfig.type]; empty for valid params and for unknown types. */
     fun validate(widget: WidgetConfig): List<ConfigError> = when (widget.type) {
         WidgetTypes.NOTE -> note(widget).errors
@@ -186,6 +221,7 @@ object WidgetParams {
         WidgetTypes.GITHUB_ACTIONS -> githubActions(widget).errors
         WidgetTypes.AGENTS -> agents(widget).errors
         WidgetTypes.FEED -> feed(widget).errors
+        WidgetTypes.WORLD_CLOCK -> worldClock(widget).errors
         else -> emptyList()
     }
 
