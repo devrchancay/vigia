@@ -5,10 +5,10 @@ import androidx.room.RoomDatabase
 import com.ramonchancay.vigia.core.data.events.EventDao
 import com.ramonchancay.vigia.core.data.events.EventEntity
 
-/** Polled source states and pushed events. Version 2 adds `events`. */
+/** Polled source states and pushed events. Version 2 adds `events`, version 3 `weather_state`. */
 @Database(
-    entities = [UptimeStateEntity::class, WorkflowStateEntity::class, EventEntity::class],
-    version = 2,
+    entities = [UptimeStateEntity::class, WorkflowStateEntity::class, EventEntity::class, WeatherStateEntity::class],
+    version = 3,
     exportSchema = true
 )
 internal abstract class StatusDatabase : RoomDatabase() {

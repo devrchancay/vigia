@@ -6,6 +6,7 @@ import androidx.compose.runtime.derivedStateOf
 import com.ramonchancay.vigia.core.device.DeviceStatus
 import com.ramonchancay.vigia.core.model.StoredEvent
 import com.ramonchancay.vigia.core.model.UptimeStatus
+import com.ramonchancay.vigia.core.model.WeatherStatus
 import com.ramonchancay.vigia.core.model.WorkflowRunStatus
 import java.time.Instant
 import java.time.ZoneId
@@ -21,6 +22,7 @@ internal class WidgetData(
     val uptime: State<Map<String, UptimeStatus>>,
     val workflows: State<Map<String, WorkflowRunStatus>>,
     val events: State<List<StoredEvent>>,
+    val weather: State<Map<String, WeatherStatus>>,
     val zone: ZoneId
 ) {
     /** Current time rounded down to the minute: relative times ("5m") recompose once a minute, not every tick. */

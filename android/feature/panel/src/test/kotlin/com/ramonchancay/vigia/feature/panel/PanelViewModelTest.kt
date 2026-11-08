@@ -33,6 +33,7 @@ class PanelViewModelTest {
     private val statusRepository = mockk<StatusRepository> {
         every { uptime } returns emptyFlow()
         every { workflows } returns emptyFlow()
+        every { weather } returns emptyFlow()
     }
 
     @Test

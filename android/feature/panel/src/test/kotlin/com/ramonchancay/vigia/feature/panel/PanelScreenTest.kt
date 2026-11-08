@@ -20,12 +20,14 @@ import com.ramonchancay.vigia.core.model.PanelConfig
 import com.ramonchancay.vigia.core.model.PanelConfigParser
 import com.ramonchancay.vigia.core.model.StoredEvent
 import com.ramonchancay.vigia.core.model.UptimeStatus
+import com.ramonchancay.vigia.core.model.WeatherStatus
 import com.ramonchancay.vigia.core.model.WidgetConfig
 import com.ramonchancay.vigia.core.model.WidgetPosition
 import com.ramonchancay.vigia.core.model.WorkflowRunStatus
 import com.ramonchancay.vigia.feature.panel.widget.AGENT_ROW_TAG
 import com.ramonchancay.vigia.feature.panel.widget.CLOCK_TIME_TAG
 import com.ramonchancay.vigia.feature.panel.widget.DEVICE_ROW_TAG
+import com.ramonchancay.vigia.feature.panel.widget.WEATHER_TEMP_TAG
 import com.ramonchancay.vigia.feature.panel.widget.WidgetData
 import java.time.Instant
 import java.time.ZoneId
@@ -52,6 +54,7 @@ class PanelScreenTest {
         uptime: Map<String, UptimeStatus> = emptyMap(),
         workflows: Map<String, WorkflowRunStatus> = emptyMap(),
         events: List<StoredEvent> = emptyList(),
+        weather: Map<String, WeatherStatus> = emptyMap(),
         zone: ZoneId = ZoneOffset.UTC
     ) = WidgetData(
         mutableStateOf(now),
@@ -59,6 +62,7 @@ class PanelScreenTest {
         mutableStateOf(uptime),
         mutableStateOf(workflows),
         mutableStateOf(events),
+        mutableStateOf(weather),
         zone
     )
 
@@ -99,6 +103,7 @@ class PanelScreenTest {
                 mutableStateOf(emptyMap()),
                 mutableStateOf(emptyMap()),
                 mutableStateOf(emptyList()),
+                mutableStateOf(emptyMap()),
                 ZoneOffset.UTC
             )
         composeRule.setContent { PanelScreen(uiState = PanelUiState.Ready(config), data = data, onAction = {}) }
@@ -298,6 +303,35 @@ class PanelScreenTest {
         composeRule.onNodeWithText("21:30").assertExists()
         composeRule.onNodeWithText("11:30").assertExists()
         assertEquals(2, composeRule.onAllNodesWithText("+1").fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun weatherShowsTemperatureSkyAndDetails() {
+        val config = (
+            PanelConfigParser.parse(
+                """
+                {"schemaVersion":1,"widgets":[{"id":"gye","type":"weather","pos":{"x":0,"y":0,"w":4,"h":4},
+                  "params":{"name":"Guayaquil","latitude":-2.19,"longitude":-79.89}}]}
+                """.trimIndent()
+            ) as ConfigParseResult.Valid
+            ).config
+        val reading = WeatherStatus(
+            key = "-2.19,-79.89",
+            temperatureC = 27.4,
+            apparentTemperatureC = 30.1,
+            weatherCode = 3,
+            maxC = 31.2,
+            minC = 22.8,
+            rainProbabilityMax = 40,
+            checkedAtMillis = 1
+        )
+        val weather = mapOf(reading.key to reading)
+        val data = data(weather = weather)
+        composeRule.setContent { PanelScreen(uiState = PanelUiState.Ready(config), data = data, onAction = {}) }
+
+        composeRule.onNodeWithTag(WEATHER_TEMP_TAG).assertTextEquals("27°")
+        composeRule.onNodeWithText("Cloudy").assertExists()
+        composeRule.onNodeWithText("feels 30° · ↑31° ↓23° · rain 40%").assertExists()
     }
 
     @Test

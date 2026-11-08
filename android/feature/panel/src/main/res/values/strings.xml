@@ -24,4 +24,14 @@
     <string name="feed_title">Feed</string>
     <string name="feed_empty">Nothing new</string>
     <string name="world_clock_title">World time</string>
+    <string name="sky_clear">Clear</string>
+    <string name="sky_partly_cloudy">Partly cloudy</string>
+    <string name="sky_cloudy">Cloudy</string>
+    <string name="sky_fog">Fog</string>
+    <string name="sky_drizzle">Drizzle</string>
+    <string name="sky_rain">Rain</string>
+    <string name="sky_snow">Snow</string>
+    <string name="sky_storm">Thunderstorm</string>
+    <string name="weather_feels">feels %1$s</string>
+    <string name="weather_rain">rain %1$d%%</string>
 </resources>

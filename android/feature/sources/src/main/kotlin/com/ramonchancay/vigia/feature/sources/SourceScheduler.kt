@@ -4,10 +4,12 @@ import com.ramonchancay.vigia.core.common.task.AlwaysOnTask
 import com.ramonchancay.vigia.core.data.config.PanelConfigRepository
 import com.ramonchancay.vigia.core.data.secrets.SecretStore
 import com.ramonchancay.vigia.core.data.status.StatusRepository
+import com.ramonchancay.vigia.core.model.WeatherStatus
 import com.ramonchancay.vigia.core.model.WorkflowRunStatus
 import com.ramonchancay.vigia.feature.sources.github.GithubActionsClient
 import com.ramonchancay.vigia.feature.sources.github.RunsResponse
 import com.ramonchancay.vigia.feature.sources.uptime.UptimeChecker
+import com.ramonchancay.vigia.feature.sources.weather.WeatherClient
 import java.time.Clock
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,15 +34,22 @@ class SourceScheduler @Inject constructor(
     private val uptimeChecker: UptimeChecker,
     private val github: GithubActionsClient,
     private val secrets: SecretStore,
+    private val weatherClient: WeatherClient,
     private val clock: Clock
 ) : AlwaysOnTask {
     override suspend fun run() {
         configRepository.config.map(SourcePlan::from).distinctUntilChanged().collectLatest { plan ->
-            status.retainOnly(plan.uptime.keys, plan.github.keys)
-            Timber.i("Polling %d uptime and %d GitHub sources", plan.uptime.size, plan.github.size)
+            status.retainOnly(plan.uptime.keys, plan.github.keys, plan.weather.keys)
+            Timber.i(
+                "Polling %d uptime, %d GitHub and %d weather sources",
+                plan.uptime.size,
+                plan.github.size,
+                plan.weather.size
+            )
             coroutineScope {
                 plan.uptime.values.forEach { launch { pollUptime(it) } }
                 plan.github.values.forEach { launch { pollGithub(it) } }
+                plan.weather.values.forEach { launch { pollWeather(it) } }
             }
         }
     }
@@ -104,6 +113,40 @@ class SourceScheduler @Inject constructor(
                     }
                 }
             }
+            delay(SourcePlan.nextDelayMillis(job.intervalSec, failures, Random.nextDouble()))
+        }
+    }
+
+    private suspend fun pollWeather(job: WeatherJob) {
+        var failures = 0
+        while (true) {
+            val reading = weatherClient.current(job.latitude, job.longitude)
+            val now = clock.millis()
+            status.recordWeather(
+                reading.fold(
+                    onSuccess = {
+                        WeatherStatus(
+                            key = job.key,
+                            temperatureC = it.temperatureC,
+                            apparentTemperatureC = it.apparentTemperatureC,
+                            weatherCode = it.weatherCode,
+                            isDay = it.isDay,
+                            maxC = it.maxC,
+                            minC = it.minC,
+                            rainProbabilityMax = it.rainProbabilityMax,
+                            checkedAtMillis = now
+                        )
+                    },
+                    onFailure = {
+                        WeatherStatus(
+                            key = job.key,
+                            error = it.message ?: it.javaClass.simpleName,
+                            checkedAtMillis = now
+                        )
+                    }
+                )
+            )
+            failures = if (reading.isSuccess) 0 else failures + 1
             delay(SourcePlan.nextDelayMillis(job.intervalSec, failures, Random.nextDouble()))
         }
     }

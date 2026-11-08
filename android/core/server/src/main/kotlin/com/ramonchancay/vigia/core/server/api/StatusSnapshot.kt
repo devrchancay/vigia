@@ -8,6 +8,7 @@ import com.ramonchancay.vigia.core.device.DeviceStatusRepository
 import com.ramonchancay.vigia.core.model.PanelConfig
 import com.ramonchancay.vigia.core.model.StoredEvent
 import com.ramonchancay.vigia.core.model.UptimeStatus
+import com.ramonchancay.vigia.core.model.WeatherStatus
 import com.ramonchancay.vigia.core.model.WidgetConfig
 import com.ramonchancay.vigia.core.model.WidgetParams
 import com.ramonchancay.vigia.core.model.WidgetTypes
@@ -38,6 +39,7 @@ class StatusSnapshot @Inject constructor(
         workflows = status.workflows.first(),
         device = device.status().first(),
         events = events.active(),
+        weather = status.weather.first(),
         nowMillis = clock.millis()
     )
 
@@ -50,14 +52,17 @@ class StatusSnapshot @Inject constructor(
             workflows: Map<String, WorkflowRunStatus>,
             device: DeviceStatus?,
             nowMillis: Long,
-            events: List<StoredEvent> = emptyList()
+            events: List<StoredEvent> = emptyList(),
+            weather: Map<String, WeatherStatus> = emptyMap()
         ): JsonObject = buildJsonObject {
             put("generatedAt", Instant.ofEpochMilli(nowMillis).toString())
             val active = events.filter { it.expiresAtMillis > nowMillis }
             put(
                 "widgets",
                 buildJsonObject {
-                    config.widgets.forEach { put(it.id, widget(it, uptime, workflows, device, active, nowMillis)) }
+                    config.widgets.forEach {
+                        put(it.id, widget(it, uptime, workflows, device, active, weather, nowMillis))
+                    }
                 }
             )
         }
@@ -68,6 +73,7 @@ class StatusSnapshot @Inject constructor(
             workflows: Map<String, WorkflowRunStatus>,
             device: DeviceStatus?,
             events: List<StoredEvent>,
+            weather: Map<String, WeatherStatus>,
             nowMillis: Long
         ): JsonObject = buildJsonObject {
             put("type", widget.type)
@@ -142,6 +148,36 @@ class StatusSnapshot @Inject constructor(
                         )
                     )
                 }
+
+                WidgetTypes.WEATHER -> {
+                    val params = WidgetParams.weather(widget).value
+                    val reading = params?.let { weather[WeatherStatus.keyOf(it.latitude, it.longitude)] }
+                    put(
+                        "weather",
+                        reading?.let {
+                            json.encodeToJsonElement(WeatherStatus.serializer(), it)
+                        } ?: JsonNull
+                    )
+                }
+
+                WidgetTypes.WORLD_CLOCK -> put(
+                    "zones",
+                    buildJsonArray {
+                        WidgetParams.worldClock(widget).value?.zones?.forEach { zone ->
+                            add(
+                                buildJsonObject {
+                                    put("label", zone.label)
+                                    put(
+                                        "time",
+                                        Instant.ofEpochMilli(
+                                            nowMillis
+                                        ).atZone(java.time.ZoneId.of(zone.zone)).toLocalDateTime().toString()
+                                    )
+                                }
+                            )
+                        }
+                    }
+                )
 
                 else -> put("error", "unsupported type")
             }

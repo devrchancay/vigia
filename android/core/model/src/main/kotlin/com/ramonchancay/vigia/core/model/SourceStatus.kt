@@ -38,3 +38,27 @@ data class WorkflowRunStatus(
             listOf(repo, branch.orEmpty(), workflow.orEmpty()).joinToString("|")
     }
 }
+
+/**
+ * Current conditions for one point. [weatherCode] is the WMO code Open-Meteo returns; [rainProbabilityMax]
+ * the highest precipitation probability for the rest of today, in percent.
+ */
+@Serializable
+data class WeatherStatus(
+    val key: String,
+    val temperatureC: Double? = null,
+    val apparentTemperatureC: Double? = null,
+    val weatherCode: Int? = null,
+    val isDay: Boolean = true,
+    val maxC: Double? = null,
+    val minC: Double? = null,
+    val rainProbabilityMax: Int? = null,
+    val error: String? = null,
+    val checkedAtMillis: Long
+) {
+    companion object {
+        /** Widgets watching the same spot (to ~1 km) share one poll. */
+        fun keyOf(latitude: Double, longitude: Double): String =
+            String.format(java.util.Locale.ROOT, "%.2f,%.2f", latitude, longitude)
+    }
+}
