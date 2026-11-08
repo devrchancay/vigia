@@ -38,6 +38,10 @@ jobs:
       - name: Lint, test and build
         run: ./gradlew build bundleRelease
 
+      - name: Claude Code hook tests
+        working-directory: integrations/claude-code
+        run: python3 -m unittest -v
+
       - name: Upload test and lint reports
         if: failure()
         uses: actions/upload-artifact@v7
