@@ -11,7 +11,7 @@ import com.ramonchancay.vigia.feature.panel.R
 @Composable
 internal fun PanelWidget(widget: WidgetConfig, data: WidgetData, modifier: Modifier = Modifier) {
     when (widget.type) {
-        WidgetTypes.CLOCK -> ClockWidget(now = data.now, zone = data.zone, modifier = modifier)
+        WidgetTypes.CLOCK -> ClockWidget(now = data.now, minute = data.minute, zone = data.zone, modifier = modifier)
 
         WidgetTypes.NOTE -> NoteWidget(widget = widget, modifier = modifier)
 

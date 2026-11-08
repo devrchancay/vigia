@@ -16,4 +16,7 @@
     <string name="github_title">CI</string>
     <string name="source_pending">checking…</string>
     <string name="github_no_runs">no runs</string>
+    <string name="device_battery_short">Bat</string>
+    <string name="device_battery_temp_short">Temp</string>
+    <string name="device_memory_short">Mem</string>
 </resources>
