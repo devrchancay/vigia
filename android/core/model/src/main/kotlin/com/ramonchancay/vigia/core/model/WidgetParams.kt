@@ -15,6 +15,7 @@ object WidgetTypes {
     const val AGENTS = "agents"
     const val FEED = "feed"
     const val WORLD_CLOCK = "world_clock"
+    const val WEATHER = "weather"
 
     val DEVICE_ROWS = listOf("battery", "batteryTemp", "memory", "wifi")
 }
@@ -60,6 +61,10 @@ data class WorldZone(val label: String, val zone: String)
 @Serializable
 data class WorldClockParams(val zones: List<WorldZone>)
 
+/** Current weather at a point, from Open-Meteo (no API key). [name] is what the tile shows. */
+@Serializable
+data class WeatherParams(val name: String, val latitude: Double, val longitude: Double, val intervalSec: Int = 900)
+
 /** Decoding and checking of `params` per widget type. Errors carry paths relative to the widget (`params.x`). */
 object WidgetParams {
     private val json = Json { ignoreUnknownKeys = false }
@@ -73,6 +78,7 @@ object WidgetParams {
     const val MAX_NOTE_LENGTH = 500
     const val MAX_ROWS = 20
     const val MAX_WORLD_ZONES = 6
+    val WEATHER_INTERVAL_RANGE = 600..3_600
 
     fun note(widget: WidgetConfig): Decoded<NoteParams> = decode(widget, NoteParams.serializer()) { params, errors ->
         if (params.text.isBlank()) errors += error(ConfigError.Code.InvalidFormat, "text", "Must not be blank")
@@ -213,6 +219,35 @@ object WidgetParams {
         }
     }
 
+    fun weather(widget: WidgetConfig): Decoded<WeatherParams> = decode(widget, WeatherParams.serializer()) {
+            params,
+            errors
+        ->
+        if (params.name.isBlank() ||
+            params.name.length > 40
+        ) {
+            errors += error(ConfigError.Code.InvalidFormat, "name", "1-40 characters")
+        }
+        if (params.latitude !in
+            -90.0..90.0
+        ) {
+            errors += error(ConfigError.Code.OutOfRange, "latitude", "Between -90 and 90")
+        }
+        if (params.longitude !in
+            -180.0..180.0
+        ) {
+            errors += error(ConfigError.Code.OutOfRange, "longitude", "Between -180 and 180")
+        }
+        if (params.intervalSec !in WEATHER_INTERVAL_RANGE) {
+            errors +=
+                error(
+                    ConfigError.Code.OutOfRange,
+                    "intervalSec",
+                    "Between ${WEATHER_INTERVAL_RANGE.first} and ${WEATHER_INTERVAL_RANGE.last}"
+                )
+        }
+    }
+
     /** Params errors for a known [WidgetConfig.type]; empty for valid params and for unknown types. */
     fun validate(widget: WidgetConfig): List<ConfigError> = when (widget.type) {
         WidgetTypes.NOTE -> note(widget).errors
@@ -222,6 +257,7 @@ object WidgetParams {
         WidgetTypes.AGENTS -> agents(widget).errors
         WidgetTypes.FEED -> feed(widget).errors
         WidgetTypes.WORLD_CLOCK -> worldClock(widget).errors
+        WidgetTypes.WEATHER -> weather(widget).errors
         else -> emptyList()
     }
 

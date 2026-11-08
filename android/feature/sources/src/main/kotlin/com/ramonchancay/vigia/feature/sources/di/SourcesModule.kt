@@ -3,6 +3,7 @@ package com.ramonchancay.vigia.feature.sources.di
 import com.ramonchancay.vigia.core.common.task.AlwaysOnTask
 import com.ramonchancay.vigia.feature.sources.SourceScheduler
 import com.ramonchancay.vigia.feature.sources.github.GithubActionsClient
+import com.ramonchancay.vigia.feature.sources.weather.WeatherClient
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -39,5 +40,9 @@ internal interface SourcesModule {
         @Provides
         @Named(GithubActionsClient.BASE_URL_NAME)
         fun providesGithubBaseUrl(): String = GithubActionsClient.DEFAULT_BASE_URL
+
+        @Provides
+        @Named(WeatherClient.BASE_URL_NAME)
+        fun providesOpenMeteoBaseUrl(): String = WeatherClient.DEFAULT_BASE_URL
     }
 }

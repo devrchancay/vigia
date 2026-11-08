@@ -1,11 +1,14 @@
 package com.ramonchancay.vigia.feature.sources
 
 import com.ramonchancay.vigia.core.model.PanelConfig
+import com.ramonchancay.vigia.core.model.WeatherStatus
 import com.ramonchancay.vigia.core.model.WidgetParams
 import com.ramonchancay.vigia.core.model.WidgetTypes
 import com.ramonchancay.vigia.core.model.WorkflowRunStatus
 import kotlin.math.min
 import kotlin.math.roundToLong
+
+data class WeatherJob(val key: String, val latitude: Double, val longitude: Double, val intervalSec: Int)
 
 data class UptimeJob(val url: String, val expectStatus: Int?, val intervalSec: Int)
 
@@ -22,11 +25,16 @@ data class GithubJob(
  * What to poll for a config. Sources are coalesced: widgets that watch the same URL (or repo, branch and
  * workflow) share one job, polled at the shortest interval any of them asked for.
  */
-data class SourcePlan(val uptime: Map<String, UptimeJob>, val github: Map<String, GithubJob>) {
+data class SourcePlan(
+    val uptime: Map<String, UptimeJob>,
+    val github: Map<String, GithubJob>,
+    val weather: Map<String, WeatherJob> = emptyMap()
+) {
     companion object {
         fun from(config: PanelConfig): SourcePlan {
             val uptime = linkedMapOf<String, UptimeJob>()
             val github = linkedMapOf<String, GithubJob>()
+            val weather = linkedMapOf<String, WeatherJob>()
             for (widget in config.widgets) {
                 when (widget.type) {
                     WidgetTypes.UPTIME -> WidgetParams.uptime(widget).value?.let { params ->
@@ -38,6 +46,18 @@ data class SourcePlan(val uptime: Map<String, UptimeJob>, val github: Map<String
                                 intervalSec = min(previous?.intervalSec ?: Int.MAX_VALUE, params.intervalSec)
                             )
                         }
+                    }
+
+                    WidgetTypes.WEATHER -> WidgetParams.weather(widget).value?.let { params ->
+                        val key = WeatherStatus.keyOf(params.latitude, params.longitude)
+                        val previous = weather[key]
+                        weather[key] =
+                            WeatherJob(
+                                key,
+                                params.latitude,
+                                params.longitude,
+                                min(previous?.intervalSec ?: Int.MAX_VALUE, params.intervalSec)
+                            )
                     }
 
                     WidgetTypes.GITHUB_ACTIONS -> WidgetParams.githubActions(widget).value?.let { params ->
@@ -56,7 +76,7 @@ data class SourcePlan(val uptime: Map<String, UptimeJob>, val github: Map<String
                     }
                 }
             }
-            return SourcePlan(uptime, github)
+            return SourcePlan(uptime, github, weather)
         }
 
         /**

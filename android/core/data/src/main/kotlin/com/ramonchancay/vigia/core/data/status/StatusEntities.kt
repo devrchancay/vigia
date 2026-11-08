@@ -3,6 +3,7 @@ package com.ramonchancay.vigia.core.data.status
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.ramonchancay.vigia.core.model.UptimeStatus
+import com.ramonchancay.vigia.core.model.WeatherStatus
 import com.ramonchancay.vigia.core.model.WorkflowRunStatus
 
 /** One row per URL: only the latest state is kept, so the database does not grow on the eMMC. */
@@ -63,6 +64,48 @@ internal data class WorkflowStateEntity(
             s.htmlUrl,
             s.startedAtMillis,
             s.updatedAtMillis,
+            s.error,
+            s.checkedAtMillis
+        )
+    }
+}
+
+@Entity(tableName = "weather_state")
+internal data class WeatherStateEntity(
+    @PrimaryKey val key: String,
+    val temperatureC: Double?,
+    val apparentTemperatureC: Double?,
+    val weatherCode: Int?,
+    val isDay: Boolean,
+    val maxC: Double?,
+    val minC: Double?,
+    val rainProbabilityMax: Int?,
+    val error: String?,
+    val checkedAtMillis: Long
+) {
+    fun toModel() = WeatherStatus(
+        key = key,
+        temperatureC = temperatureC,
+        apparentTemperatureC = apparentTemperatureC,
+        weatherCode = weatherCode,
+        isDay = isDay,
+        maxC = maxC,
+        minC = minC,
+        rainProbabilityMax = rainProbabilityMax,
+        error = error,
+        checkedAtMillis = checkedAtMillis
+    )
+
+    companion object {
+        fun of(s: WeatherStatus) = WeatherStateEntity(
+            s.key,
+            s.temperatureC,
+            s.apparentTemperatureC,
+            s.weatherCode,
+            s.isDay,
+            s.maxC,
+            s.minC,
+            s.rainProbabilityMax,
             s.error,
             s.checkedAtMillis
         )

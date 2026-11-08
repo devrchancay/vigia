@@ -54,11 +54,11 @@ internal fun PanelRoute(onOpenSetup: () -> Unit, viewModel: PanelViewModel = hil
     val uptime = viewModel.uptime.collectAsStateWithLifecycle()
     val workflows = viewModel.workflows.collectAsStateWithLifecycle()
     val events = viewModel.events.collectAsStateWithLifecycle()
+    val weather = viewModel.weather.collectAsStateWithLifecycle()
     val zone = remember { ZoneId.systemDefault() }
-    val data =
-        remember(now, device, uptime, workflows, events, zone) {
-            WidgetData(now, device, uptime, workflows, events, zone)
-        }
+    val data = remember(now, device, uptime, workflows, events, weather, zone) {
+        WidgetData(now, device, uptime, workflows, events, weather, zone)
+    }
     PanelScreen(uiState = uiState, data = data, onAction = viewModel::onAction, onLongPress = onOpenSetup)
 }
 
@@ -168,6 +168,7 @@ private fun PanelReadyPreview() {
             uptime = mutableStateOf(emptyMap()),
             workflows = mutableStateOf(emptyMap()),
             events = mutableStateOf(emptyList()),
+            weather = mutableStateOf(emptyMap()),
             zone = ZoneId.of("UTC")
         )
     }

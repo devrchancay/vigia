@@ -27,4 +27,16 @@ internal interface StatusDao {
 
     @Query("DELETE FROM workflow_state WHERE `key` NOT IN (:keys)")
     suspend fun retainWorkflows(keys: List<String>)
+
+    @Query("SELECT * FROM weather_state")
+    fun observeWeather(): Flow<List<WeatherStateEntity>>
+
+    @Query("SELECT * FROM weather_state WHERE `key` = :key")
+    suspend fun weather(key: String): WeatherStateEntity?
+
+    @Upsert
+    suspend fun upsertWeather(entity: WeatherStateEntity)
+
+    @Query("DELETE FROM weather_state WHERE `key` NOT IN (:keys)")
+    suspend fun retainWeather(keys: List<String>)
 }

@@ -24,4 +24,14 @@
     <string name="feed_title">Novedades</string>
     <string name="feed_empty">Nada nuevo</string>
     <string name="world_clock_title">Hora en el mundo</string>
+    <string name="sky_clear">Despejado</string>
+    <string name="sky_partly_cloudy">Parcialmente nublado</string>
+    <string name="sky_cloudy">Nublado</string>
+    <string name="sky_fog">Niebla</string>
+    <string name="sky_drizzle">Llovizna</string>
+    <string name="sky_rain">Lluvia</string>
+    <string name="sky_snow">Nieve</string>
+    <string name="sky_storm">Tormenta</string>
+    <string name="weather_feels">sensación %1$s</string>
+    <string name="weather_rain">lluvia %1$d%%</string>
 </resources>
