@@ -1,6 +1,5 @@
 package com.ramonchancay.vigia
 
-import android.content.ComponentName
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -49,7 +48,7 @@ class MainActivity : ComponentActivity() {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
         }
-        kiosk.applyDeviceOwnerPolicies(ComponentName(this, MainActivity::class.java))
+        kiosk.applyDeviceOwnerPolicies()
         hideSystemBars()
         setContent {
             val startDestination by viewModel.startDestination.collectAsStateWithLifecycle()

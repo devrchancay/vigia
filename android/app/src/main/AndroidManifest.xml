@@ -29,13 +29,21 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Can be picked as the home app, so the panel comes back after a reboot or the home button. -->
+        </activity>
+
+        <!-- Opt-in home app. Disabled by default so Vigía never replaces the launcher unless the owner turns it on
+             in the setup screen (KioskController.setHomeEnabled). -->
+        <activity-alias
+            android:name=".HomeAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-        </activity>
+        </activity-alias>
 
         <receiver
             android:name=".kiosk.BootReceiver"

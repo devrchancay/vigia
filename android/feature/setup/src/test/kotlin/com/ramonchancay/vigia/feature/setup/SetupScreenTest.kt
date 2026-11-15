@@ -1,11 +1,13 @@
 package com.ramonchancay.vigia.feature.setup
 
 import android.net.Uri
+import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.RGBLuminanceSource
@@ -47,6 +49,16 @@ class SetupScreenTest {
         composeRule.onNodeWithText("Open panel").performClick()
 
         assertEquals(listOf(SetupAction.RotateToken, SetupAction.Done), actions)
+    }
+
+    @Test
+    fun homeAppIsAnOptionalSwitchOffByDefault() {
+        val actions = mutableListOf<SetupAction>()
+        composeRule.setContent { SetupScreen(uiState = ready, onAction = { actions += it }) }
+
+        composeRule.onNodeWithTag(SETUP_HOME_SWITCH_TAG).performScrollTo().assertIsOff().performClick()
+
+        assertEquals(listOf(SetupAction.SetHomeEnabled(true)), actions)
     }
 
     @Test
