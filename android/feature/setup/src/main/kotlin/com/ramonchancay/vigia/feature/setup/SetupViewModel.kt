@@ -60,6 +60,17 @@ class SetupViewModel @Inject constructor(
 
                 SetupAction.Refresh -> refresh(wrongPin = false)
 
+                is SetupAction.SetHomeEnabled -> {
+                    kiosk.setHomeEnabled(action.enabled)
+                    refresh(wrongPin = false)
+                    // Turning it on only makes Vigía a candidate; the owner still picks it in system settings.
+                    if (action.enabled &&
+                        !kioskFacts.value.state.isDefaultHome
+                    ) {
+                        events.send(SetupEvent.OpenHomeSettings)
+                    }
+                }
+
                 is SetupAction.ExitKiosk -> if (pinMatches(action.pin)) {
                     events.send(SetupEvent.StopLockTask)
                     refresh(wrongPin = false)

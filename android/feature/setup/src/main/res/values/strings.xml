@@ -13,8 +13,7 @@
     <string name="setup_cancel">Cancel</string>
     <string name="kiosk_title">Kiosk</string>
     <string name="kiosk_owner_yes">Device owner: the panel is pinned and starts on boot.</string>
-    <string name="kiosk_owner_no">Not device owner: the panel starts on boot as the home app. See docs/KIOSK.md for full kiosk mode.</string>
-    <string name="kiosk_make_home">Use as home app</string>
+    <string name="kiosk_owner_no">Not device owner: the server starts on boot; open the panel yourself, or turn on the home app option below.</string>
     <string name="kiosk_is_home">Vigía is the home app.</string>
     <string name="kiosk_no_pin">No kiosk PIN set. Set one with: vigia secret set kiosk-pin</string>
     <string name="kiosk_wrong_pin">Wrong PIN</string>
@@ -22,4 +21,6 @@
     <string name="kiosk_release">Release device owner</string>
     <string name="kiosk_pin_title">Kiosk PIN</string>
     <string name="kiosk_confirm">Continue</string>
+    <string name="kiosk_home_switch">Use Vigía as the home app (optional)</string>
+    <string name="kiosk_pick_home">Pick Vigía in the system home settings to finish.</string>
 </resources>

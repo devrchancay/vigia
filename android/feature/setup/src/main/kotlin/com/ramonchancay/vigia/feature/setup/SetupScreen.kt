@@ -24,6 +24,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,7 +39,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -54,6 +54,7 @@ import com.ramonchancay.vigia.core.designsystem.theme.VigiaTheme
 
 internal const val SETUP_TOKEN_TAG = "setup_token"
 internal const val SETUP_QR_TAG = "setup_qr"
+internal const val SETUP_HOME_SWITCH_TAG = "setup_home_switch"
 
 @Composable
 internal fun SetupRoute(onDone: () -> Unit, viewModel: SetupViewModel = hiltViewModel()) {
@@ -63,7 +64,14 @@ internal fun SetupRoute(onDone: () -> Unit, viewModel: SetupViewModel = hiltView
         viewModel.effects.collect { effect ->
             when (effect) {
                 SetupEvent.Done -> onDone()
+
                 SetupEvent.StopLockTask -> runCatching { activity?.stopLockTask() }
+
+                SetupEvent.OpenHomeSettings -> runCatching {
+                    activity?.startActivity(
+                        Intent(Settings.ACTION_HOME_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                }
             }
         }
     }
@@ -151,7 +159,6 @@ private fun SetupReady(state: SetupUiState.Ready, onAction: (SetupAction) -> Uni
 
 @Composable
 private fun KioskSection(state: SetupUiState.Ready, onAction: (SetupAction) -> Unit) {
-    val context = LocalContext.current
     var pinFor by rememberSaveable { mutableStateOf<String?>(null) }
     Label(stringResource(R.string.kiosk_title))
     val kiosk = state.kiosk
@@ -160,14 +167,21 @@ private fun KioskSection(state: SetupUiState.Ready, onAction: (SetupAction) -> U
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
-    if (!kiosk.isDefaultHome) {
-        OutlinedButton(onClick = {
-            context.startActivity(Intent(Settings.ACTION_HOME_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        }) {
-            Text(stringResource(R.string.kiosk_make_home))
-        }
-    } else {
-        Text(stringResource(R.string.kiosk_is_home), style = MaterialTheme.typography.bodyMedium)
+    // Optional and off by default: Vigía only becomes a home app when the owner switches this on.
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Switch(
+            checked = kiosk.isHomeEnabled,
+            onCheckedChange = { onAction(SetupAction.SetHomeEnabled(it)) },
+            modifier = Modifier.testTag(SETUP_HOME_SWITCH_TAG)
+        )
+        Text(stringResource(R.string.kiosk_home_switch), style = MaterialTheme.typography.bodyMedium)
+    }
+    if (kiosk.isHomeEnabled) {
+        Text(
+            stringResource(if (kiosk.isDefaultHome) R.string.kiosk_is_home else R.string.kiosk_pick_home),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
     if (!state.pinRequired) {
         Text(

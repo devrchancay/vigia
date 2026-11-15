@@ -86,4 +86,22 @@ class SetupViewModelTest {
         }
         io.mockk.verify(exactly = 1) { kiosk.releaseDeviceOwner() }
     }
+
+    @Test
+    fun `turning the home option on enables it and opens the system home picker`() = runTest {
+        val viewModel = SetupViewModel(tokenStore, addresses, kiosk, secrets)
+        every { kiosk.state() } returns
+            KioskState(isDeviceOwner = false, isDefaultHome = false, isLockTaskActive = false)
+
+        viewModel.effects.test {
+            viewModel.onAction(SetupAction.SetHomeEnabled(true))
+            assertEquals(SetupEvent.OpenHomeSettings, awaitItem())
+            viewModel.onAction(SetupAction.SetHomeEnabled(false))
+            expectNoEvents()
+        }
+        io.mockk.verifyOrder {
+            kiosk.setHomeEnabled(true)
+            kiosk.setHomeEnabled(false)
+        }
+    }
 }

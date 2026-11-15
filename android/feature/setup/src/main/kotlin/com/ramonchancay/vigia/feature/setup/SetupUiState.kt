@@ -31,6 +31,9 @@ sealed interface SetupAction {
     data class ExitKiosk(val pin: String) : SetupAction
 
     data class ReleaseDeviceOwner(val pin: String) : SetupAction
+
+    /** Opt in or out of offering Vigía as the home app. */
+    data class SetHomeEnabled(val enabled: Boolean) : SetupAction
 }
 
 /** One-shot effects the screen performs with its Activity. */
@@ -38,4 +41,7 @@ sealed interface SetupEvent {
     data object Done : SetupEvent
 
     data object StopLockTask : SetupEvent
+
+    /** Opens the system screen where the owner picks the home app. */
+    data object OpenHomeSettings : SetupEvent
 }

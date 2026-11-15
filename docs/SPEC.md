@@ -50,7 +50,7 @@ Kotlin, Jetpack Compose + Material 3, MVVM (ViewModel + StateFlow, UiState + eve
 - `PanelActivity` is fullscreen, edge-to-edge, immersive, `FLAG_KEEP_SCREEN_ON`.
 - Always landscape (`sensorLandscape`: either landscape side, following the sensor). The panel is designed for a phone lying on its side on a desk stand; the grid is laid out for landscape.
 - `VigiaService` foreground service hosts the Ktor server and pollers. Use `specialUse` foreground service type with a clear property description (`dataSync` has a 6 h/day limit on Android 15+). Started on boot (`BOOT_COMPLETED`) and by the activity.
-- Kiosk: if the app is device owner, enable lock task mode and set itself as persistent preferred HOME. If not, run as a normal app and show the setup checklist.
+- Kiosk: the server service starts on boot. Being the home app is optional and off by default (decided 2026-11-14: Vigía must never replace the launcher unless the owner asks): a switch in the setup screen enables a HOME activity-alias and opens the system home picker. As device owner the app also enables lock task mode, and sets itself as persistent HOME only when that option is on.
 - Night schedule: window brightness (no `WRITE_SETTINGS` needed) and optional dimmed layout.
 
 ### Performance budget (reference: Helio G35, 2 GB)
